@@ -1415,7 +1415,6 @@ export default function App() {
 
   // Barcode Auto-Focus Input Target Ref
   const barcodeInputRef = useRef<HTMLInputElement>(null);
-  const scanTimeoutRef = useRef<any>(null);
 
   // Hotkey overlay and state variables
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
@@ -1822,27 +1821,11 @@ export default function App() {
     return new Uint8Array(bytes);
   };
 
-  // Web Serial Printer Sender - Redirected to LPT1 backend printing
-  const printReceiptViaSerial = async (data: Uint8Array) => {
-    try {
-      const response = await fetch("/api/print-receipt", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          receiptBytes: Array.from(data),
-        }),
-      });
-      const result = await response.json();
-      if (!response.ok) {
-        throw new Error(result.error || "เกิดข้อผิดพลาดในการพิมพ์ผ่านเซิร์ฟเวอร์");
-      }
-      showToast("ส่งคำสั่งพิมพ์ไปยังเครื่องพิมพ์ LPT1 หลังบ้านสำเร็จ", "success");
-    } catch (err: any) {
-      console.error("LPT1 Printer Error:", err);
-      showToast(`พิมพ์ใบเสร็จล้มเหลว: ${err.message || err}`, "error");
-    }
+  // Web Serial Printer Sender - Redirected to LPT1 backend printing -> Reverted to Auto Browser Print
+  const triggerAutoPrint = () => {
+    setTimeout(() => {
+      window.print();
+    }, 300); // หน่วงเวลาเล็กน้อยให้ DOM Render ใบเสร็จเสร็จสมบูรณ์
   };
 
   // Generate ESC/POS Bytes for Orders
@@ -2049,8 +2032,7 @@ export default function App() {
   useEffect(() => {
     if (shouldTriggerPrint && completedOrderReceipt) {
       setShouldTriggerPrint(false);
-      const bytes = generateOrderEscPosBytes(completedOrderReceipt);
-      printReceiptViaSerial(bytes);
+      triggerAutoPrint();
       barcodeInputRef.current?.focus();
     }
   }, [completedOrderReceipt, shouldTriggerPrint]);
@@ -2059,8 +2041,7 @@ export default function App() {
   useEffect(() => {
     if (shouldTriggerBillPrint && completedBillPaymentReceipt) {
       setShouldTriggerBillPrint(false);
-      const bytes = generateBillEscPosBytes(completedBillPaymentReceipt);
-      printReceiptViaSerial(bytes);
+      triggerAutoPrint();
       barcodeInputRef.current?.focus();
     }
   }, [completedBillPaymentReceipt, shouldTriggerBillPrint]);
@@ -4444,20 +4425,19 @@ export default function App() {
 
   // Barcode input change handler with built-in layout mapping and debounce auto-submit
   const handleBarcodeChange = (val: string) => {
-    const converted = convertThaiToEngKeyboard(val);
-    setBarcodeSearch(converted);
+    setBarcodeSearch(convertThaiToEngKeyboard(val));
+  };
 
-    if (scanTimeoutRef.current) {
-      clearTimeout(scanTimeoutRef.current);
-    }
-
-    if (converted.trim()) {
-      scanTimeoutRef.current = setTimeout(() => {
-        // Auto-submit after 80ms of inactivity (indicative of scanner burst ending)
-        if (converted.trim().length >= 3) {
-          handleBarcodeSubmit(undefined, converted.trim());
-        }
-      }, 80);
+  const handleBarcodeKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (barcodeSearch.trim()) {
+        handleBarcodeSubmit(undefined, barcodeSearch.trim());
+      } else if (cart.length > 0 && !isPaymentModalOpen && !isSplitPaymentModalOpen) {
+        setIsPaymentModalOpen(true);
+        setReceivedAmount("");
+      }
+      setBarcodeSearch("");
     }
   };
 
@@ -4467,7 +4447,9 @@ export default function App() {
       e.preventDefault();
     }
     const rawQuery = directQuery !== undefined ? directQuery : barcodeSearch;
-    const cleanSearch = convertThaiToEngKeyboard(rawQuery.trim());
+    const cleanSearch = rawQuery.trim();
+    setBarcodeSearch("");
+    
     if (!cleanSearch) {
       // If pressing Enter on empty barcode and cart has items, open F9 Checkout Modal
       if (cart.length > 0 && !isPaymentModalOpen && !isSplitPaymentModalOpen) {
@@ -7030,6 +7012,7 @@ export default function App() {
                     type="text"
                     placeholder="สแกนบาร์โค้ดที่นี่... (F2 ค้นหาละเอียด, Esc ปิดหน้าต่าง)"
                     value={barcodeSearch}
+                    onKeyDown={handleBarcodeKeyDown}
                     onChange={(e) => handleBarcodeChange(e.target.value)}
                     className="w-full bg-slate-800 border border-slate-700 text-white font-mono text-sm rounded-lg py-2 px-3 pl-9 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-slate-950 transition-all text-center tracking-widest placeholder:text-slate-500"
                   />
