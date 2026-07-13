@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import Barcode from "react-barcode";
 import * as XLSX from "xlsx";
+import jsQR from "jsqr";
 import {
   Search,
   ShoppingCart,
@@ -79,25 +80,113 @@ import {
 export const convertThaiToEngKeyboard = (input: string): string => {
   if (!input) return "";
   const map: Record<string, string> = {
-    // Numbers row (unshifted)
-    'ๅ': '1', 'ภ': '2', 'ถ': '3', 'ุ': '4', 'ึ': '5', 'ค': '6', 'ต': '7', 'จ': '8', 'ข': '9', 'ช': '0',
-    // Row 2 (unshifted)
-    'ๆ': 'q', 'ไ': 'w', 'ำ': 'e', 'พ': 'r', 'ะ': 't', 'ร': 'y', 'น': 'u', 'ย': 'i', 'บ': 'o', 'ล': 'p', 'ฃ': '\\',
-    // Row 3 (unshifted)
-    'ฟ': 'a', 'ห': 's', 'ก': 'd', 'ด': 'f', 'เ': 'g', '้': 'h', '่': 'j', 'า': 'k', 'ส': 'l', 'ว': ';', 'ง': "'",
-    // Row 4 (unshifted)
-    'ผ': 'z', 'ป': 'x', 'แ': 'c', 'อ': 'v', 'ิ': 'b', 'ื': 'n', 'ท': 'm', 'ม': ',', 'ใ': '.', 'ฝ': '/',
+    // Number row (unshifted) - Fixed Mapping
+    'ๅ': '1', '/': '2', '-': '3', 'ภ': '4', 'ถ': '5', 'ุ': '6', 'ึ': '7', 'ค': '8', 'ต': '9', 'จ': '0', 'ข': '-', 'ช': '=',
     
-    // Row 1 (shifted)
+    // Number row (shifted)
     '+': '!', '๑': '@', '๒': '#', '๓': '$', '๔': '%', 'ู': '^', '฿': '&', '๕': '*', '๖': '(', '๗': ')', '๘': '_', '๙': '+',
-    // Row 2 (shifted)
-    '๐': 'Q', '"': 'W', 'ฎ': 'E', 'ฑ': 'R', 'ธ': 'T', 'ํ': 'Y', 'ณ': 'U', 'ญ': 'I', 'ฐ': 'O', 'ฅ': 'P', 'ฅ': '|',
-    // Row 3 (shifted)
+    
+    // QWERTY row
+    'ๆ': 'q', 'ไ': 'w', 'ำ': 'e', 'พ': 'r', 'ะ': 't', 'ร': 'y', 'น': 'u', 'ย': 'i', 'บ': 'o', 'ล': 'p', 'ฃ': '[', 'ฅ': ']',
+    '๐': 'Q', '"': 'W', 'ฎ': 'E', 'ฑ': 'R', 'ธ': 'T', 'ํ': 'Y', 'ณ': 'U', 'ญ': 'I', 'ฐ': 'O',
+    
+    // ASDF row
+    'ฟ': 'a', 'ห': 's', 'ก': 'd', 'ด': 'f', 'เ': 'g', '้': 'h', '่': 'j', 'า': 'k', 'ส': 'l', 'ว': ';', 'ง': "'",
     'ฤ': 'A', 'ฆ': 'S', 'ฏ': 'D', 'โ': 'F', 'ฌ': 'G', '็': 'H', '๋': 'J', 'ษ': 'K', 'ศ': 'L', 'ซ': ':',
-    // Row 4 (shifted)
+    
+    // ZXCV row
+    'ผ': 'z', 'ป': 'x', 'แ': 'c', 'อ': 'v', 'ิ': 'b', 'ื': 'n', 'ท': 'm', 'ม': ',', 'ใ': '.', 'ฝ': '/',
     '(': 'Z', ')': 'X', 'ฉ': 'C', 'ฮ': 'V', 'ฺ': 'B', '์': 'N', '?': 'M', 'ฒ': '<', 'ฬ': '>', 'ฦ': '?'
   };
+  
   return input.split('').map(char => map[char] || char).join('');
+};
+
+export const generatePromptPayPayload = (id: string, amount?: number): string => {
+  // Check if it's already a raw EMVCo QR payload
+  if (id && id.startsWith("000201") && id.includes("6304")) {
+    const withoutCrc = id.substring(0, id.indexOf("6304"));
+    let index = 0;
+    let parsedTags: Record<string, string> = {};
+    while (index < withoutCrc.length) {
+      const tag = withoutCrc.substr(index, 2);
+      const lenStr = withoutCrc.substr(index + 2, 2);
+      const len = parseInt(lenStr, 10);
+      const val = withoutCrc.substr(index + 4, len);
+      parsedTags[tag] = val;
+      index += 4 + len;
+    }
+    
+    parsedTags["01"] = "12"; // Dynamic
+    if (amount && amount > 0) {
+      parsedTags["54"] = amount.toFixed(2);
+    } else {
+      delete parsedTags["54"];
+    }
+    
+    let newPayload = "";
+    const sortedTags = Object.keys(parsedTags).sort();
+    for (const tag of sortedTags) {
+      if (tag === "63") continue;
+      const val = parsedTags[tag];
+      const lenStr = ("00" + val.length).slice(-2);
+      newPayload += `${tag}${lenStr}${val}`;
+    }
+    
+    newPayload += "6304";
+    let crc = 0xFFFF;
+    for (let i = 0; i < newPayload.length; i++) {
+      crc ^= newPayload.charCodeAt(i) << 8;
+      for (let j = 0; j < 8; j++) {
+        if ((crc & 0x8000) > 0) crc = (crc << 1) ^ 0x1021;
+        else crc = (crc << 1);
+      }
+    }
+    return newPayload + (crc & 0xFFFF).toString(16).toUpperCase().padStart(4, "0");
+  }
+
+  const sanitizeId = id.replace(/[^0-9]/g, "");
+  let targetType = "01";
+  let target = "";
+  
+  if (sanitizeId.length >= 15) {
+    targetType = "03"; // e-Wallet / Biller ID
+    target = sanitizeId;
+  } else if (sanitizeId.length >= 13) {
+    targetType = "02"; // Tax ID / National ID
+    target = sanitizeId;
+  } else {
+    targetType = "01"; // Phone Number
+    target = ("0000000000000" + sanitizeId.replace(/^0/, "66")).slice(-13);
+  }
+
+  const f = (tag: string, value: string) => `${tag}${("00" + value.length).slice(-2)}${value}`;
+  
+  const data = [
+    f("00", "01"),
+    f("01", amount ? "12" : "11"),
+    f("29", f("00", "A000000677010111") + f(targetType, target)),
+    f("58", "TH"),
+    f("53", "764"),
+  ];
+  
+  if (amount) {
+    data.push(f("54", amount.toFixed(2)));
+  }
+  
+  const dataToCrc = data.join("") + "6304";
+  let crc = 0xFFFF;
+  for (let i = 0; i < dataToCrc.length; i++) {
+    crc ^= dataToCrc.charCodeAt(i) << 8;
+    for (let j = 0; j < 8; j++) {
+      if ((crc & 0x8000) > 0) {
+        crc = (crc << 1) ^ 0x1021;
+      } else {
+        crc = (crc << 1);
+      }
+    }
+  }
+  return dataToCrc + (crc & 0xFFFF).toString(16).toUpperCase().padStart(4, "0");
 };
 
 // TypeScript declarations for state objects
@@ -648,6 +737,7 @@ export default function App() {
     promptpayEnabled?: boolean;
     promptpayNumber?: string;
     promptpayName?: string;
+    promptpayQrUrl?: string;
   }>({
     cart: [],
     saleType: "retail",
@@ -668,6 +758,7 @@ export default function App() {
     promptpayEnabled: false,
     promptpayNumber: "",
     promptpayName: "",
+    promptpayQrUrl: "",
   });
 
   // Folder Ad Slideshow States
@@ -1140,6 +1231,7 @@ export default function App() {
   const [storePromptpayEnabled, setStorePromptpayEnabled] = useState(false);
   const [storePromptpayNumber, setStorePromptpayNumber] = useState("");
   const [storePromptpayName, setStorePromptpayName] = useState("");
+  const [storePromptpayQrUrl, setStorePromptpayQrUrl] = useState("");
   const [storeEnableAdvancedInventory, setStoreEnableAdvancedInventory] = useState(false);
   const [storeEnableTaxInvoice, setStoreEnableTaxInvoice] = useState(false);
   const [storeVatRate, setStoreVatRate] = useState("7.00");
@@ -1421,6 +1513,9 @@ export default function App() {
   const [modalSearchQuery, setModalSearchQuery] = useState("");
   const [modalSearchFocusedProductIndex, setModalSearchFocusedProductIndex] = useState(0);
   const [modalSearchFocusedUnitIndex, setModalSearchFocusedUnitIndex] = useState(0);
+  const [f2SelectedProduct, setF2SelectedProduct] = useState<{p: any, u: any, basePrice: number} | null>(null);
+  const [f2QuantityInput, setF2QuantityInput] = useState("");
+  const f2QuantityInputRef = useRef<HTMLInputElement>(null);
   const [isSplitPaymentModalOpen, setIsSplitPaymentModalOpen] = useState(false);
   const [isRedeemPointsModalOpen, setIsRedeemPointsModalOpen] = useState(false);
   const [redeemPointsInput, setRedeemPointsInput] = useState<string>("");
@@ -1502,6 +1597,7 @@ export default function App() {
       setStorePromptpayEnabled(storeSettingsData.promptpayEnabled || false);
       setStorePromptpayNumber(storeSettingsData.promptpayNumber || "");
       setStorePromptpayName(storeSettingsData.promptpayName || "");
+      setStorePromptpayQrUrl(storeSettingsData.promptpayQrUrl || "");
       setStoreEnableAdvancedInventory(storeSettingsData.enableAdvancedInventory || false);
       setStoreEnableTaxInvoice(storeSettingsData.enableTaxInvoice || false);
       setStoreVatRate(storeSettingsData.vatRate || "7.00");
@@ -1825,7 +1921,7 @@ export default function App() {
   const triggerAutoPrint = () => {
     setTimeout(() => {
       window.print();
-    }, 300); // หน่วงเวลาเล็กน้อยให้ DOM Render ใบเสร็จเสร็จสมบูรณ์
+    }, 15); // หน่วงเวลา 15ms ให้ DOM Render ใบเสร็จ
   };
 
   // Generate ESC/POS Bytes for Orders
@@ -4220,6 +4316,7 @@ export default function App() {
           promptpayEnabled: storePromptpayEnabled,
           promptpayNumber: storePromptpayNumber,
           promptpayName: storePromptpayName,
+          promptpayQrUrl: storePromptpayQrUrl,
           enableAdvancedInventory: storeEnableAdvancedInventory,
           enableTaxInvoice: storeEnableTaxInvoice,
           vatRate: storeVatRate,
@@ -5076,7 +5173,8 @@ export default function App() {
       splitWelfareAmount: finalSplitWelfare,
       promptpayEnabled: storePromptpayEnabled,
       promptpayNumber: storePromptpayNumber,
-      promptpayName: storePromptpayName
+      promptpayName: storePromptpayName,
+      promptpayQrUrl: storePromptpayQrUrl
     };
 
     fetch("/api/customer-display/update", {
@@ -5100,7 +5198,8 @@ export default function App() {
     splitWelfare,
     storePromptpayEnabled,
     storePromptpayNumber,
-    storePromptpayName
+    storePromptpayName,
+    storePromptpayQrUrl
   ]);
 
   // History Filter List Calculation
@@ -6032,16 +6131,16 @@ export default function App() {
           {/* Status: IDLE (Welcome & Advertisement Media Screen) */}
           {customerDisplayData.status === "idle" && (
             customerDisplayData.adEnabled !== false ? (
-              <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 h-full">
+              <div className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-6 h-full">
                 {/* Left Column (7/12): Giant Advertisement Media Player */}
-                <div className="lg:col-span-7 flex flex-col h-full gap-4">
+                <div className="md:col-span-7 flex flex-col h-full gap-4">
                   <div className="flex-1 relative rounded-3xl overflow-hidden shadow-lg border border-slate-200 bg-white">
                     {renderCustomerAd("h-full w-full")}
                   </div>
                 </div>
 
                 {/* Right Column (5/12): Welcome Panel & Active Promotions */}
-                <div className="lg:col-span-5 flex flex-col gap-6 h-full overflow-hidden">
+                <div className="md:col-span-5 flex flex-col gap-6 h-full overflow-hidden">
                   {/* Welcome & Info Card */}
                   <div className="bg-white border border-slate-200/80 rounded-3xl p-6 flex flex-col justify-between shadow-md shrink-0 relative overflow-hidden">
                     <div className="absolute top-[-30%] right-[-10%] w-60 h-60 bg-emerald-500/5 rounded-full blur-2xl pointer-events-none"></div>
@@ -6101,7 +6200,7 @@ export default function App() {
               </div>
             ) : (
               // Beautiful 2-column horizontal grid layout when Ads are fully closed!
-              <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-8 h-full items-stretch animate-fade-in">
+              <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-8 h-full items-stretch animate-fade-in">
                 {/* Welcome & Info Card (taking full height now!) */}
                 <div className="bg-white border border-slate-200/80 rounded-3xl p-8 flex flex-col justify-between shadow-md relative overflow-hidden h-full animate-fade-in">
                   <div className="absolute top-[-20%] right-[-10%] w-80 h-80 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none"></div>
@@ -6178,9 +6277,9 @@ export default function App() {
 
           {/* Status: ACTIVE or PAYING (Cart Scanning & Payment phase) */}
           {(customerDisplayData.status === "active" || customerDisplayData.status === "paying") && (
-            <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 h-full overflow-hidden">
+            <div className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-6 h-full overflow-hidden">
               {/* Left Column (7/12): Cart Scanned Table */}
-              <div className="lg:col-span-7 bg-white border border-slate-200 rounded-3xl flex flex-col overflow-hidden shadow-lg">
+              <div className="md:col-span-7 bg-white border border-slate-200 rounded-3xl flex flex-col overflow-hidden shadow-lg">
                 <div className="bg-slate-50 border-b border-slate-200 px-6 py-4 flex justify-between items-center shrink-0">
                   <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2">
                     <ShoppingBag className="w-5 h-5 text-emerald-600" />
@@ -6204,7 +6303,7 @@ export default function App() {
                     customerDisplayData.cart.map((item, idx) => (
                       <div key={idx} className="px-6 py-4 flex justify-between items-center hover:bg-slate-50 transition-colors">
                         <div className="space-y-1 max-w-[70%]">
-                          <p className="font-bold text-slate-800 text-sm lg:text-base leading-tight">
+                          <p className="font-bold text-slate-800 text-sm md:text-base leading-tight">
                             {item.productName}
                           </p>
                           <div className="flex items-center gap-2 text-xs">
@@ -6236,16 +6335,16 @@ export default function App() {
               </div>
 
               {/* Right Column (5/12): Big Receipt Total & Optional Media Ad Player */}
-              <div className="lg:col-span-5 flex flex-col gap-2 overflow-y-auto pr-1 h-full scrollbar-none shrink-0">
+              <div className="md:col-span-5 flex flex-col gap-2 overflow-y-auto pr-1 h-full scrollbar-none shrink-0">
                 
                 {/* Total amount summary card */}
-                <div className="bg-white border border-slate-200 rounded-2xl p-3 lg:p-4 shadow-md flex flex-col justify-between shrink-0 relative overflow-hidden">
+                <div className="bg-white border border-slate-200 rounded-2xl p-3 md:p-4 shadow-md flex flex-col justify-between shrink-0 relative overflow-hidden">
                   <div className="absolute top-0 left-0 w-40 h-40 bg-emerald-500/5 rounded-full blur-2xl pointer-events-none"></div>
                   <div className="space-y-0.5 text-center relative z-10">
                     <span className="text-slate-500 text-[10px] font-bold uppercase tracking-wider block">
                       ยอดรวมสุทธิที่ต้องชำระ (TOTAL DUE)
                     </span>
-                    <h2 className="text-3xl lg:text-4xl font-black text-emerald-700 font-mono tracking-tight py-0.5">
+                    <h2 className="text-3xl md:text-4xl font-black text-emerald-700 font-mono tracking-tight py-0.5">
                       ฿{parseFloat(customerDisplayData.totalAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </h2>
                   </div>
@@ -6311,7 +6410,7 @@ export default function App() {
                 {customerDisplayData.promptpayEnabled && 
                  (customerDisplayData.paymentMethod === "transfer" || 
                   (customerDisplayData.paymentMethod === "split" && (customerDisplayData.splitTransferAmount || 0) > 0)) && (
-                  <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-md flex flex-col shrink-0 lg:-mt-1">
+                  <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-md flex flex-col shrink-0 md:-mt-1">
                     {/* Header: Thai PromptPay Blue & White Stripe */}
                     <div className="bg-[#0f345c] text-white py-1.5 px-3 flex items-center justify-between shrink-0 font-sans">
                       <div className="flex items-center gap-1.5">
@@ -6342,13 +6441,24 @@ export default function App() {
                       )}
 
                       {/* ENLARGED QR Code Frame but optimized to fit well inside screen */}
-                      <div className="relative bg-white border border-slate-150 p-2 rounded-xl shadow-sm mb-2 w-full max-w-[190px] lg:max-w-[210px] mx-auto group hover:border-[#0f345c]/30 transition-all duration-300">
-                        <img
-                          src={`https://promptpay.io/${(customerDisplayData.promptpayNumber || "").replace(/[^0-9]/g, "")}/${(customerDisplayData.paymentMethod === "split" ? (customerDisplayData.splitTransferAmount || 0) : (customerDisplayData.totalAmount || 0)).toFixed(2)}.png`}
-                          alt="PromptPay QR Code"
-                          className="w-full h-auto object-contain select-none max-h-[190px] lg:max-h-[210px]"
-                          referrerPolicy="no-referrer"
-                        />
+                      <div className="relative bg-white border border-slate-150 p-2 rounded-xl shadow-sm mb-2 w-full max-w-[190px] md:max-w-[210px] mx-auto group hover:border-[#0f345c]/30 transition-all duration-300">
+                        {customerDisplayData.promptpayNumber ? (
+                          <img
+                            src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(generatePromptPayPayload(customerDisplayData.promptpayNumber, customerDisplayData.paymentMethod === "split" ? (customerDisplayData.splitTransferAmount || 0) : (customerDisplayData.totalAmount || 0)))}`}
+                            alt="PromptPay QR Code"
+                            className="w-full h-auto object-contain select-none max-h-[190px] md:max-h-[210px]"
+                            referrerPolicy="no-referrer"
+                          />
+                        ) : customerDisplayData.promptpayQrUrl ? (
+                          <img
+                            src={customerDisplayData.promptpayQrUrl}
+                            alt="PromptPay Custom QR Code"
+                            className="w-full h-auto object-contain select-none max-h-[190px] md:max-h-[210px] rounded-lg"
+                            referrerPolicy="no-referrer"
+                          />
+                        ) : (
+                           <div className="w-full h-32 flex items-center justify-center text-slate-300 text-xs">ไม่พบข้อมูล QR Code</div>
+                        )}
                       </div>
 
                       {/* Display Amount */}
@@ -13210,6 +13320,108 @@ export default function App() {
                               ชื่อเจ้าของบัญชีหรือชื่อร้านเพื่อแสดงยืนยันบนหน้าจอลูกค้า
                             </span>
                           </div>
+
+                          <div className="flex flex-col gap-1 text-xs">
+                            <label className="font-bold text-slate-700">
+                              รูปภาพ QR Code (ถ้ามี, ข้ามได้)
+                            </label>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="text-xs"
+                              onChange={async (e) => {
+                                const file = e.target.files?.[0];
+                                if (!file) return;
+
+                                const reader = new FileReader();
+                                reader.onload = (event) => {
+                                  const img = new Image();
+                                  img.onload = async () => {
+                                    const maxDim = 800;
+                                    let w = img.width;
+                                    let h = img.height;
+                                    if (w > maxDim || h > maxDim) {
+                                      if (w > h) { h = Math.round((h * maxDim) / w); w = maxDim; }
+                                      else { w = Math.round((w * maxDim) / h); h = maxDim; }
+                                    }
+
+                                    const canvas = document.createElement('canvas');
+                                    const ctx = canvas.getContext('2d');
+                                    if (!ctx) return;
+                                    canvas.width = w;
+                                    canvas.height = h;
+                                    ctx.drawImage(img, 0, 0, w, h);
+                                    
+                                    const imageData = ctx.getImageData(0, 0, w, h);
+                                    const code = jsQR(imageData.data, w, h);
+                                    let foundId = false;
+
+                                    if (code && code.data) {
+                                      const text = code.data;
+                                      
+                                      // Check if it's a valid EMVCo QR code (Thai QR Payment)
+                                      if (text.startsWith('000201') && text.includes('6304')) {
+                                        // Save the full payload for dynamic generation
+                                        setStorePromptpayNumber(text);
+                                        showToast(`อ่าน QR Code ต้นฉบับสำเร็จ ระบบจะสร้าง QR Code อัตโนมัติในแต่ละบิลจากรูปนี้`, "success");
+                                        foundId = true;
+                                      } else {
+                                        // Fallback legacy parsing for phone numbers
+                                        const ppAppId = 'A000000677010111';
+                                        const idx = text.indexOf(ppAppId);
+                                        if (idx !== -1) {
+                                          const afterAppId = text.substring(idx + ppAppId.length);
+                                          const len = parseInt(afterAppId.substring(2, 4), 10);
+                                          let id = afterAppId.substring(4, 4 + len);
+                                          if (id.startsWith('0066')) {
+                                            id = '0' + id.substring(4);
+                                          }
+                                          setStorePromptpayNumber(id);
+                                          showToast(`ดึงหมายเลขพร้อมเพย์สำเร็จ (${id}) ระบบจะสร้าง QR Code อัตโนมัติในแต่ละบิล`, "success");
+                                          foundId = true;
+                                        }
+                                      }
+                                    }
+
+                                    if (!foundId) {
+                                      showToast("ไม่พบหมายเลขพร้อมเพย์ในรูปนี้ แต่ระบบบันทึกรูปภาพเพื่อใช้แสดงผลแบบคงที่แล้ว", "info");
+                                    }
+
+                                    canvas.toBlob(async (blob) => {
+                                      if (!blob) return;
+                                      const formData = new FormData();
+                                      formData.append("file", blob, "qr_code.jpg");
+                                      try {
+                                        const res = await fetch("/api/upload-media", { method: "POST", body: formData });
+                                        if (res.ok) {
+                                          const data = await res.json();
+                                          setStorePromptpayQrUrl(data.url);
+                                          if (foundId) {
+                                            showToast("อัปโหลด QR Code ต้นฉบับสำเร็จ", "success");
+                                          }
+                                        } else {
+                                          showToast("อัปโหลด QR Code ล้มเหลว", "error");
+                                        }
+                                      } catch (err) {
+                                        showToast("เครือข่ายขัดข้อง", "error");
+                                      }
+                                    }, "image/jpeg", 0.85);
+                                  };
+                                  img.src = event.target?.result as string;
+                                };
+                                reader.readAsDataURL(file);
+                              }}
+                            />
+                            {storePromptpayQrUrl && (
+                              <div className="mt-1 flex flex-col gap-1">
+                                <img src={storePromptpayQrUrl} className="w-16 h-16 object-contain rounded border bg-slate-50" alt="PromptPay QR" />
+                                <button type="button" onClick={() => setStorePromptpayQrUrl("")} className="text-red-500 text-[10px] text-left hover:underline w-fit">ลบรูปภาพ</button>
+                              </div>
+                            )}
+                            <span className="text-[10px] text-slate-400">
+                              อัปโหลดรูป QR Code หากต้องการใช้ QR แบบคงที่ (รองรับเลขผู้รับเงิน 15 หลัก) 
+                            </span>
+                          </div>
                         </div>
                       )}
                     </div>
@@ -16296,20 +16508,9 @@ export default function App() {
                       const u = p.units[modalSearchFocusedUnitIndex];
                       if (u) {
                         const basePrice = parseFloat(saleType === "wholesale" ? u.wholesalePrice : u.retailPrice);
-                        addToCart({
-                          type: "unit",
-                          id: u.id,
-                          unitName: u.unitName,
-                          productName: p.name,
-                          basePrice,
-                          barcode: u.barcode,
-                          conversionFactor: u.conversionFactor,
-                          productId: p.id,
-                        });
-                        showToast(`เพิ่ม ${p.name} (${u.unitName || u.name}) แล้ว`, "success");
-                        setModalSearchQuery("");
+                        setF2SelectedProduct({ p, u, basePrice });
                         setIsSearchModalOpen(false);
-                        setTimeout(() => barcodeInputRef.current?.focus(), 50);
+                        setTimeout(() => f2QuantityInputRef.current?.focus(), 50);
                       }
                     }
                   }
@@ -16338,16 +16539,9 @@ export default function App() {
                           <button
                             key={unit.id}
                             onClick={() => {
-                              addToCart({
-                                type: "unit",
-                                id: unit.id,
-                                unitName: unit.unitName,
-                                productName: p.name,
-                                basePrice,
-                                barcode: unit.barcode,
-                                conversionFactor: unit.conversionFactor,
-                                productId: p.id,
-                              });
+                              setF2SelectedProduct({ p, u: unit, basePrice });
+                              setIsSearchModalOpen(false);
+                              setTimeout(() => f2QuantityInputRef.current?.focus(), 50);
                             }}
                             className={`${isFocused ? 'bg-emerald-600 border-emerald-600 text-white ring-2 ring-emerald-500 ring-offset-1 shadow-md' : 'bg-emerald-50 hover:bg-emerald-600 border-emerald-200/80 hover:border-emerald-600 text-emerald-800 hover:text-white'} border rounded-xl px-2.5 py-1.5 text-[11px] font-semibold transition-all cursor-pointer`}
                           >
@@ -16363,6 +16557,55 @@ export default function App() {
             <div className="text-[10px] text-slate-400 italic text-center border-t border-slate-100 pt-3">
               * แคชเชียร์สามารถกดคลิกเครื่องหมายบวกสินค้าได้ทันที เมาส์จะคงอยู่ที่ปุ่มชิ้นถัดไป สะดวกรวดเร็ว
             </div>
+          </div>
+        </div>
+      )}
+
+            {/* POPUP MODAL: F2 Quantity */}
+      {f2SelectedProduct && (
+        <div id="f2-quantity-modal" className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-[60]">
+          <div className="bg-white rounded-3xl border border-slate-200 p-6 max-w-sm w-full shadow-2xl animate-scaleIn flex flex-col gap-4">
+            <h3 className="font-bold text-slate-900 text-lg text-center">ระบุจำนวนที่ต้องการเพิ่ม</h3>
+            <p className="text-center text-sm text-slate-600 font-medium">
+              {f2SelectedProduct.p.name} ({f2SelectedProduct.u.unitName || f2SelectedProduct.u.name})
+            </p>
+            <input
+              ref={f2QuantityInputRef}
+              type="number"
+              min="1"
+              value={f2QuantityInput}
+              onChange={(e) => setF2QuantityInput(e.target.value)}
+              placeholder="จำนวน (ค่าเริ่มต้น = 1)"
+              className="w-full text-center text-xl font-bold font-mono bg-slate-50 border border-slate-300 rounded-xl py-3 px-4 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              onKeyDown={(e) => {
+                if (e.key === "Escape") {
+                  setF2SelectedProduct(null);
+                  setF2QuantityInput("");
+                  setTimeout(() => barcodeInputRef.current?.focus(), 50);
+                } else if (e.key === "Enter") {
+                  e.preventDefault();
+                  const qty = parseInt(f2QuantityInput || "1", 10);
+                  if (qty > 0) {
+                    addToCart({
+                      type: "unit",
+                      id: f2SelectedProduct.u.id,
+                      unitName: f2SelectedProduct.u.unitName,
+                      productName: f2SelectedProduct.p.name,
+                      basePrice: f2SelectedProduct.basePrice,
+                      barcode: f2SelectedProduct.u.barcode,
+                      conversionFactor: f2SelectedProduct.u.conversionFactor,
+                      productId: f2SelectedProduct.p.id,
+                    }, qty);
+                    showToast(`เพิ่ม ${f2SelectedProduct.p.name} จำนวน ${qty} รายการ แล้ว`, "success");
+                  }
+                  setF2SelectedProduct(null);
+                  setF2QuantityInput("");
+                  setModalSearchQuery("");
+                  setTimeout(() => barcodeInputRef.current?.focus(), 50);
+                }
+              }}
+            />
+            <p className="text-center text-xs text-slate-400 mt-1">กด Enter เพื่อยืนยัน หรือ Esc เพื่อยกเลิก</p>
           </div>
         </div>
       )}

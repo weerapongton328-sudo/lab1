@@ -1,0 +1,13 @@
+{
+  "name": "pos-root-proxy",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "npm --prefix ./LabPos-main run dev",
+    "build": "npm --prefix ./LabPos-main run build",
+    "start": "npm --prefix ./LabPos-main run start"
+  },
+  "dependencies": {
+    "iconv-lite": "^0.7.3"
+  }
+}

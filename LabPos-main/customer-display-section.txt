@@ -1,0 +1,1001 @@
+6101:              <p className="text-[10.5px] text-emerald-100 font-medium mt-0.5">จอแสดงผลฝั่งลูกค้า (Customer Display - Glass Edition)</p>
+6102-            </div>
+6103-          </div>
+6104-          <div className="flex items-center gap-3">
+6105-            <div className="text-right font-mono pr-2.5 border-r border-emerald-700/60 text-white leading-tight">
+6106-              <p className="text-xs font-bold text-emerald-50">
+6107-                {liveTime.toLocaleDateString("th-TH", { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+6108-              </p>
+6109-              <p className="text-[11px] text-yellow-300 font-bold tracking-wider mt-0.5">
+6110-                ⏰ {liveTime.toLocaleTimeString("th-TH")}
+6111-              </p>
+6112-            </div>
+6113-
+6114-            <button
+6115-              type="button"
+6116-              onClick={() => {
+6117-                setIsCustomerDisplayState(false);
+6118-                window.history.pushState({}, "", "/");
+6119-              }}
+6120-              className="bg-emerald-900/60 hover:bg-emerald-900 text-white border border-emerald-700/40 px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 focus:outline-none shadow-sm"
+6121-            >
+6122-              <LogOut className="w-3.5 h-3.5" />
+6123-              กลับหน้าหลัก
+6124-            </button>
+6125-          </div>
+6126-        </header>
+6127-
+6128-        {/* Main Content Area */}
+6129-        <div className="flex-1 flex overflow-hidden p-4 gap-4 bg-transparent z-10">
+6130-          
+6131-          {/* Status: IDLE (Welcome & Advertisement Media Screen) */}
+6132-          {customerDisplayData.status === "idle" && (
+6133-            customerDisplayData.adEnabled !== false ? (
+6134-              <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 h-full">
+6135-                {/* Left Column (7/12): Giant Advertisement Media Player */}
+6136-                <div className="lg:col-span-7 flex flex-col h-full gap-4">
+6137-                  <div className="flex-1 relative rounded-3xl overflow-hidden shadow-lg border border-slate-200 bg-white">
+6138-                    {renderCustomerAd("h-full w-full")}
+6139-                  </div>
+6140-                </div>
+6141-
+6142-                {/* Right Column (5/12): Welcome Panel & Active Promotions */}
+6143-                <div className="lg:col-span-5 flex flex-col gap-6 h-full overflow-hidden">
+6144-                  {/* Welcome & Info Card */}
+6145-                  <div className="bg-white border border-slate-200/80 rounded-3xl p-6 flex flex-col justify-between shadow-md shrink-0 relative overflow-hidden">
+6146-                    <div className="absolute top-[-30%] right-[-10%] w-60 h-60 bg-emerald-500/5 rounded-full blur-2xl pointer-events-none"></div>
+6147-                    <div className="space-y-3">
+6148-                      <span className="bg-emerald-50 text-emerald-700 text-[10px] font-bold px-3 py-1.5 rounded-full border border-emerald-100 uppercase tracking-widest inline-block">
+6149-                        Welcome to {storeSettingsData?.name || "POS OK"}
+6150-                      </span>
+6151-                      <h2 className="text-3xl font-extrabold text-slate-800 leading-snug">
+6152-                        ยินดีต้อนรับสู่ <br />
+6153-                        <span className="text-emerald-600 font-black">{storeSettingsData?.name || "POS OK"}</span>
+6154-                      </h2>
+6155-                      <p className="text-slate-500 text-xs leading-relaxed">
+6156-                        เลือกซื้อสินค้าคุณภาพดีในราคาส่งและปลีกสุดพิเศษ พนักงานของเรายินดีให้บริการท่านตลอดวัน สะสมคะแนนได้ทุกบิล!
+6157-                      </p>
+6158-                    </div>
+6159-
+6160-                    <div className="bg-emerald-50 border border-emerald-200/60 rounded-2xl p-4 flex items-center gap-4 mt-5">
+6161-                      <div className="bg-emerald-100 text-emerald-700 p-2.5 rounded-xl border border-emerald-200/30">
+6162-                        <Sparkles className="w-6 h-6 animate-pulse" />
+6163-                      </div>
+6164-                      <div>
+6165-                        <h3 className="font-bold text-emerald-900 text-sm">เคาน์เตอร์พร้อมให้บริการแล้ว</h3>
+6166-                        <p className="text-[10px] text-emerald-700 mt-0.5">โปรดนำสินค้าที่มีบาร์โค้ดมายังเคาน์เตอร์แคชเชียร์เพื่อแสกน</p>
+6167-                      </div>
+6168-                    </div>
+6169-                  </div>
+6170-
+6171-                  {/* Promotions Card */}
+6172-                  <div className="flex-1 bg-white border border-slate-200/80 rounded-3xl p-6 flex flex-col shadow-md overflow-hidden">
+6173-                    <h3 className="text-xs font-bold text-emerald-700 uppercase tracking-wider mb-4 flex items-center gap-1.5 shrink-0">
+6174-                      <Tag className="w-4 h-4 text-emerald-600" />
+6175-                      โปรโมชั่นและสิทธิพิเศษวันนี้
+6176-                    </h3>
+6177-                    <div className="flex-1 overflow-y-auto space-y-3 pr-1 scrollbar-thin">
+6178-                      {promotionsList.length === 0 ? (
+6179-                        <div className="h-full flex flex-col items-center justify-center text-center text-slate-400 py-6">
+6180-                          <ShoppingBag className="w-10 h-10 text-slate-300 mb-2" />
+6181-                          <p className="text-xs font-semibold">ไม่มีกิจกรรมโปรโมชั่นที่เปิดใช้งานขณะนี้</p>
+6182-                          <p className="text-[10px] text-slate-500 mt-0.5">ท่านสามารถสะสมคะแนนจากเบอร์โทรศัพท์เพื่อใช้เป็นส่วนลดได้ทันที</p>
+6183-                        </div>
+6184-                      ) : (
+6185-                        promotionsList.map((promo, idx) => (
+6186-                          <div key={idx} className="bg-slate-50 border border-slate-150 rounded-2xl p-3.5 flex gap-3 hover:border-emerald-500/30 transition-all duration-200">
+6187-                            <div className="bg-emerald-100 text-emerald-800 w-8 h-8 rounded-xl flex items-center justify-center shrink-0 font-extrabold text-xs border border-emerald-200/40">
+6188-                              {idx + 1}
+6189-                            </div>
+6190-                            <div className="space-y-0.5">
+6191-                              <h4 className="font-bold text-slate-800 text-xs leading-tight">{promo.name}</h4>
+6192-                              <p className="text-[10px] text-slate-500 leading-relaxed">{promo.description}</p>
+6193-                            </div>
+6194-                          </div>
+6195-                        ))
+6196-                      )}
+6197-                    </div>
+6198-                  </div>
+6199-                </div>
+6200-              </div>
+6201-            ) : (
+6202-              // Beautiful 2-column horizontal grid layout when Ads are fully closed!
+6203-              <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-8 h-full items-stretch animate-fade-in">
+6204-                {/* Welcome & Info Card (taking full height now!) */}
+6205-                <div className="bg-white border border-slate-200/80 rounded-3xl p-8 flex flex-col justify-between shadow-md relative overflow-hidden h-full animate-fade-in">
+6206-                  <div className="absolute top-[-20%] right-[-10%] w-80 h-80 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none"></div>
+6207-                  
+6208-                  <div className="space-y-4">
+6209-                    <span className="bg-emerald-50 text-emerald-700 text-xs font-bold px-3 py-1.5 rounded-full border border-emerald-100 uppercase tracking-widest inline-block">
+6210-                      Welcome to {storeSettingsData?.name || "POS OK"}
+6211-                    </span>
+6212-                    
+6213-                    {storeSettingsData?.logoUrl ? (
+6214-                      <img 
+6215-                        src={storeSettingsData.logoUrl} 
+6216-                        alt="Store Logo" 
+6217-                        className="h-24 w-auto object-contain my-4 max-w-[280px]" 
+6218-                        referrerPolicy="no-referrer" 
+6219-                      />
+6220-                    ) : (
+6221-                      <div className="bg-emerald-100/60 text-emerald-700 p-3 rounded-xl mb-4 w-32 h-16 flex items-center justify-center">
+6222-                        <img src="/logo.svg" alt="POS OK" className="h-full w-auto object-contain animate-pulse" />
+6223-                      </div>
+6224-                    )}
+6225-                    
+6226-                    <h2 className="text-4xl font-black text-slate-800 leading-tight">
+6227-                      ยินดีต้อนรับสู่ <br />
+6228-                      <span className="text-emerald-600 font-extrabold">{storeSettingsData?.name || "POS OK"}</span>
+6229-                    </h2>
+6230-                    <p className="text-slate-500 text-sm leading-relaxed max-w-lg">
+6231-                      ยินดีต้อนรับเข้าสู่ร้านค้าของเราค่ะ/ครับ เลือกซื้อสินค้าคุณภาพดีในราคาส่งและปลีกสุดพิเศษ พนักงานของเรายินดีให้บริการท่านตลอดวัน สะสมคะแนนได้ทุกบิลเพียงแจ้งเบอร์โทรศัพท์มือถือกับพนักงานแคชเชียร์ก่อนชำระเงิน!
+6232-                    </p>
+6233-                  </div>
+6234-
+6235-                  <div className="bg-emerald-50 border border-emerald-200/60 rounded-2xl p-5 flex items-center gap-4 mt-6">
+6236-                    <div className="bg-emerald-100 text-emerald-700 p-3 rounded-xl border border-emerald-200/30">
+6237-                      <Sparkles className="w-6 h-6 animate-pulse text-emerald-600" />
+6238-                    </div>
+6239-                    <div>
+6240-                      <h3 className="font-extrabold text-emerald-900 text-base">เคาน์เตอร์พร้อมให้บริการแล้ว</h3>
+6241-                      <p className="text-xs text-emerald-700 mt-0.5">โปรดนำสินค้าที่มีบาร์โค้ดมายังเคาน์เตอร์แคชเชียร์เพื่อทำรายการสแกนสินค้า</p>
+6242-                    </div>
+6243-                  </div>
+6244-                </div>
+6245-
+6246-                {/* Promotions Card (full height, beautifully matching) */}
+6247-                <div className="bg-white border border-slate-200/80 rounded-3xl p-8 flex flex-col shadow-md overflow-hidden h-full">
+6248-                  <h3 className="text-sm font-extrabold text-emerald-700 uppercase tracking-wider mb-5 flex items-center gap-2 shrink-0">
+6249-                    <Tag className="w-5 h-5 text-emerald-600 animate-bounce" />
+6250-                    โปรโมชั่นและสิทธิพิเศษวันนี้ (Special Promotions)
+6251-                  </h3>
+6252-                  <div className="flex-1 overflow-y-auto space-y-4 pr-2 scrollbar-thin">
+6253-                    {promotionsList.length === 0 ? (
+6254-                      <div className="h-full flex flex-col items-center justify-center text-center text-slate-400 py-12">
+6255-                        <ShoppingBag className="w-16 h-16 text-slate-300 mb-3" />
+6256-                        <p className="text-sm font-bold text-slate-600">ไม่มีกิจกรรมโปรโมชั่นที่เปิดใช้งานขณะนี้</p>
+6257-                        <p className="text-xs text-slate-500 mt-1">ท่านสามารถสะสมคะแนนจากเบอร์โทรศัพท์เพื่อใช้เป็นส่วนลดได้ทันที</p>
+6258-                      </div>
+6259-                    ) : (
+6260-                      promotionsList.map((promo, idx) => (
+6261-                        <div key={idx} className="bg-slate-50 border border-slate-150 rounded-2xl p-4 flex gap-4 hover:border-emerald-500/30 transition-all duration-200">
+6262-                          <div className="bg-emerald-100 text-emerald-800 w-10 h-10 rounded-xl flex items-center justify-center shrink-0 font-extrabold text-sm border border-emerald-200/40">
+6263-                            {idx + 1}
+6264-                          </div>
+6265-                          <div className="space-y-1">
+6266-                            <h4 className="font-extrabold text-slate-800 text-sm leading-tight">{promo.name}</h4>
+6267-                            <p className="text-xs text-slate-500 leading-relaxed">{promo.description}</p>
+6268-                          </div>
+6269-                        </div>
+6270-                      ))
+6271-                    )}
+6272-                  </div>
+6273-                </div>
+6274-              </div>
+6275-            )
+6276-          )}
+6277-
+6278-          {/* Status: ACTIVE or PAYING (Cart Scanning & Payment phase) */}
+6279-          {(customerDisplayData.status === "active" || customerDisplayData.status === "paying") && (
+6280-            <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 h-full overflow-hidden">
+6281-              {/* Left Column (7/12): Cart Scanned Table */}
+6282-              <div className="lg:col-span-7 bg-white border border-slate-200 rounded-3xl flex flex-col overflow-hidden shadow-lg">
+6283-                <div className="bg-slate-50 border-b border-slate-200 px-6 py-4 flex justify-between items-center shrink-0">
+6284-                  <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2">
+6285-                    <ShoppingBag className="w-5 h-5 text-emerald-600" />
+6286-                    รายการสินค้าของท่าน (Your Basket)
+6287-                  </h3>
+6288-                  <span className="bg-emerald-100 text-emerald-800 border border-emerald-200/60 font-bold px-3 py-1 rounded-full text-xs">
+6289-                    ทั้งหมด {customerDisplayData.cart.reduce((sum, item) => sum + item.qty, 0)} ชิ้น
+6290-                  </span>
+6291-                </div>
+6292-
+6293-                <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
+6294-                  {customerDisplayData.cart.length === 0 ? (
+6295-                    <div className="h-full flex flex-col items-center justify-center text-center text-slate-400 py-12">
+6296-                      <div className="animate-pulse bg-emerald-100 p-4 rounded-full mb-3 text-emerald-600">
+6297-                        <ShoppingBag className="w-10 h-10" />
+6298-                      </div>
+6299-                      <p className="text-sm font-bold text-slate-600">กำลังรอสแกนสินค้า...</p>
+6300-                      <p className="text-xs text-slate-500 mt-1">รายการสินค้าของคุณจะปรากฏขึ้นที่นี่ทันทีที่ทำการสแกน</p>
+6301-                    </div>
+6302-                  ) : (
+6303-                    customerDisplayData.cart.map((item, idx) => (
+6304-                      <div key={idx} className="px-6 py-4 flex justify-between items-center hover:bg-slate-50 transition-colors">
+6305-                        <div className="space-y-1 max-w-[70%]">
+6306-                          <p className="font-bold text-slate-800 text-sm lg:text-base leading-tight">
+6307-                            {item.productName}
+6308-                          </p>
+6309-                          <div className="flex items-center gap-2 text-xs">
+6310-                            <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-bold border border-slate-200">
+6311-                              {item.unitName}
+6312-                            </span>
+6313-                            <span className="text-slate-500">
+6314-                              ราคาต่อหน่วย: ฿{parseFloat(item.price || 0).toFixed(2)}
+6315-                            </span>
+6316-                            {item.isFreebie && (
+6317-                              <span className="bg-emerald-100 text-emerald-850 border border-emerald-200 px-2 py-0.5 rounded-md font-bold text-[10px] animate-pulse">
+6318-                                ฟรี (Freebie)
+6319-                              </span>
+6320-                            )}
+6321-                          </div>
+6322-                        </div>
+6323-                        <div className="text-right shrink-0">
+6324-                          <p className="text-xs text-emerald-700 font-bold font-mono">
+6325-                            x {item.qty} ชิ้น
+6326-                          </p>
+6327-                          <p className="font-black text-slate-900 text-lg font-mono mt-1">
+6328-                            ฿{(item.price * item.qty).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+6329-                          </p>
+6330-                        </div>
+6331-                      </div>
+6332-                    ))
+6333-                  )}
+6334-                </div>
+6335-              </div>
+6336-
+6337-              {/* Right Column (5/12): Big Receipt Total & Optional Media Ad Player */}
+6338-              <div className="lg:col-span-5 flex flex-col gap-2 overflow-y-auto pr-1 h-full scrollbar-none shrink-0">
+6339-                
+6340-                {/* Total amount summary card */}
+6341-                <div className="bg-white border border-slate-200 rounded-2xl p-3 lg:p-4 shadow-md flex flex-col justify-between shrink-0 relative overflow-hidden">
+6342-                  <div className="absolute top-0 left-0 w-40 h-40 bg-emerald-500/5 rounded-full blur-2xl pointer-events-none"></div>
+6343-                  <div className="space-y-0.5 text-center relative z-10">
+6344-                    <span className="text-slate-500 text-[10px] font-bold uppercase tracking-wider block">
+6345-                      ยอดรวมสุทธิที่ต้องชำระ (TOTAL DUE)
+6346-                    </span>
+6347-                    <h2 className="text-3xl lg:text-4xl font-black text-emerald-700 font-mono tracking-tight py-0.5">
+6348-                      ฿{parseFloat(customerDisplayData.totalAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+6349-                    </h2>
+6350-                  </div>
+6351-
+6352-                  {/* Summary variables */}
+6353-                  <div className="border-t border-slate-100 pt-2 mt-2 space-y-1.5 text-xs text-slate-600 font-sans relative z-10">
+6354-                    {customerDisplayData.manualDiscount > 0 && (
+6355-                      <div className="flex justify-between">
+6356-                        <span>ส่วนลดพิเศษ:</span>
+6357-                        <span className="font-mono text-rose-600 font-bold text-sm">
+6358-                          -฿{parseFloat(customerDisplayData.manualDiscount).toFixed(2)}
+6359-                        </span>
+6360-                      </div>
+6361-                    )}
+6362-                    <div className="flex justify-between items-center">
+6363-                      <span>วิธีการชำระเงิน:</span>
+6364-                      <span className="font-bold text-slate-800 flex items-center gap-1 bg-slate-50 border border-slate-200 px-2 py-0.5 rounded-lg text-xs">
+6365-                        {customerDisplayData.paymentMethod === "cash" ? (
+6366-                          <>💵 เงินสด (Cash)</>
+6367-                        ) : customerDisplayData.paymentMethod === "transfer" ? (
+6368-                          <>📱 เงินโอน (Bank Transfer)</>
+6369-                        ) : customerDisplayData.paymentMethod === "card" ? (
+6370-                          <>💳 บัตรเครดิต/เดบิต</>
+6371-                        ) : customerDisplayData.paymentMethod === "credit" ? (
+6372-                          <>🤝 ขายเชื่อ (Credit Sales)</>
+6373-                        ) : customerDisplayData.paymentMethod === "welfare" ? (
+6374-                          <>💳 บัตรประชารัฐ (Welfare)</>
+6375-                        ) : customerDisplayData.paymentMethod === "split" ? (
+6376-                          <>🔄 แยกจ่าย (Split Payment)</>
+6377-                        ) : (
+6378-                          <>🏷️ ชำระเงินอื่นๆ</>
+6379-                        )}
+6380-                      </span>
+6381-                    </div>
+6382-
+6383-                    {customerDisplayData.paymentMethod === "split" && (
+6384-                      <div className="bg-slate-50 border border-slate-200 rounded-2xl p-2 mt-1 font-mono text-[11px] text-slate-700 space-y-1">
+6385-                        <p className="font-sans font-bold text-[10px] text-emerald-700 uppercase tracking-wider mb-0.5">รายละเอียดการแยกจ่าย (Split Breakdown)</p>
+6386-                        {customerDisplayData.splitCashAmount !== null && customerDisplayData.splitCashAmount !== undefined && customerDisplayData.splitCashAmount > 0 && (
+6387-                          <div className="flex justify-between">
+6388-                            <span>💵 ยอดชำระด้วยเงินสด:</span>
+6389-                            <span className="text-slate-950 font-bold">฿{parseFloat(customerDisplayData.splitCashAmount.toString()).toFixed(2)}</span>
+6390-                          </div>
+6391-                        )}
+6392-                        {customerDisplayData.splitTransferAmount !== null && customerDisplayData.splitTransferAmount !== undefined && customerDisplayData.splitTransferAmount > 0 && (
+6393-                          <div className="flex justify-between">
+6394-                            <span>📱 ยอดชำระด้วยเงินโอน:</span>
+6395-                            <span className="text-slate-950 font-bold">฿{parseFloat(customerDisplayData.splitTransferAmount.toString()).toFixed(2)}</span>
+6396-                          </div>
+6397-                        )}
+6398-                        {customerDisplayData.splitWelfareAmount !== null && customerDisplayData.splitWelfareAmount !== undefined && customerDisplayData.splitWelfareAmount > 0 && (
+6399-                          <div className="flex justify-between">
+6400-                            <span>💳 ยอดชำระด้วยบัตรประชารัฐ:</span>
+6401-                            <span className="text-slate-950 font-bold">฿{parseFloat(customerDisplayData.splitWelfareAmount.toString()).toFixed(2)}</span>
+6402-                          </div>
+6403-                        )}
+6404-                      </div>
+6405-                    )}
+6406-                  </div>
+6407-                </div>
+6408-
+6409-                {/* PromptPay QR Code - separate card but with extremely tight negative margin to bring it very close to the total due card (เอากรอบขึ้นมาใกล้กรอบ รวมเงิน) */}
+6410-                {customerDisplayData.promptpayEnabled && 
+6411-                 (customerDisplayData.paymentMethod === "transfer" || 
+6412-                  (customerDisplayData.paymentMethod === "split" && (customerDisplayData.splitTransferAmount || 0) > 0)) && (
+6413-                  <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-md flex flex-col shrink-0 lg:-mt-1">
+6414-                    {/* Header: Thai PromptPay Blue & White Stripe */}
+6415-                    <div className="bg-[#0f345c] text-white py-1.5 px-3 flex items-center justify-between shrink-0 font-sans">
+6416-                      <div className="flex items-center gap-1.5">
+6417-                        <QrCode className="w-4.5 h-4.5 text-emerald-400 animate-pulse" />
+6418-                        <div>
+6419-                          <p className="text-[9px] font-bold tracking-wide text-slate-200">สแกนชำระเงินผ่าน</p>
+6420-                          <p className="text-xs font-black text-white leading-none">พร้อมเพย์ (PromptPay)</p>
+6421-                        </div>
+6422-                      </div>
+6423-                      <div className="bg-white rounded px-1.5 py-0.5 text-[#0f345c] text-[9px] font-black uppercase shrink-0">
+6424-                        PromptPay
+6425-                      </div>
+6426-                    </div>
+6427-
+6428-                    <div className="p-2.5 bg-white flex flex-col items-center justify-center text-center">
+6429-                      {/* Name of Account */}
+6430-                      {customerDisplayData.promptpayName && (
+6431-                        <p className="text-xs font-bold text-slate-800 mb-0.5">
+6432-                          ชื่อบัญชี: <span className="text-[#0f345c]">{customerDisplayData.promptpayName}</span>
+6433-                        </p>
+6434-                      )}
+6435-                      
+6436-                      {/* PromptPay Number */}
+6437-                      {customerDisplayData.promptpayNumber && (
+6438-                        <p className="text-[10px] font-mono text-slate-500 mb-1.5 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200/50 inline-block">
+6439-                          ID: {customerDisplayData.promptpayNumber}
+6440-                        </p>
+6441-                      )}
+6442-
+6443-                      {/* ENLARGED QR Code Frame but optimized to fit well inside screen */}
+6444-                      <div className="relative bg-white border border-slate-150 p-2 rounded-xl shadow-sm mb-2 w-full max-w-[190px] lg:max-w-[210px] mx-auto group hover:border-[#0f345c]/30 transition-all duration-300">
+6445-                        {customerDisplayData.promptpayNumber ? (
+6446-                          <img
+6447-                            src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(generatePromptPayPayload(customerDisplayData.promptpayNumber, customerDisplayData.paymentMethod === "split" ? (customerDisplayData.splitTransferAmount || 0) : (customerDisplayData.totalAmount || 0)))}`}
+6448-                            alt="PromptPay QR Code"
+6449-                            className="w-full h-auto object-contain select-none max-h-[190px] lg:max-h-[210px]"
+6450-                            referrerPolicy="no-referrer"
+6451-                          />
+6452-                        ) : customerDisplayData.promptpayQrUrl ? (
+6453-                          <img
+6454-                            src={customerDisplayData.promptpayQrUrl}
+6455-                            alt="PromptPay Custom QR Code"
+6456-                            className="w-full h-auto object-contain select-none max-h-[190px] lg:max-h-[210px] rounded-lg"
+6457-                            referrerPolicy="no-referrer"
+6458-                          />
+6459-                        ) : (
+6460-                           <div className="w-full h-32 flex items-center justify-center text-slate-300 text-xs">ไม่พบข้อมูล QR Code</div>
+6461-                        )}
+6462-                      </div>
+6463-
+6464-                      {/* Display Amount */}
+6465-                      <div className="bg-emerald-50 border border-emerald-100 text-emerald-800 px-3 py-1 rounded-lg font-bold font-sans inline-block mb-1">
+6466-                        <span className="text-[10px] mr-1 text-emerald-600">ยอดชำระเงิน:</span>
+6467-                        <span className="text-sm font-black font-mono">
+6468-                          ฿{(customerDisplayData.paymentMethod === "split" ? (customerDisplayData.splitTransferAmount || 0) : (customerDisplayData.totalAmount || 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+6469-                        </span>
+6470-                      </div>
+6471-
+6472-                      <p className="text-[8.5px] text-slate-400 mt-0.5 leading-normal max-w-[240px]">
+6473-                        สแกนด้วยแอปธนาคารใดก็ได้ • หลังจากโอนเสร็จแล้วกรุณาแสดงหลักฐานต่อพนักงาน
+6474-                      </p>
+6475-                    </div>
+6476-                  </div>
+6477-                )}
+6478-
+6479-                 {/* Media advertisement block if PromptPay is not displayed */}
+6480-                {!(customerDisplayData.promptpayEnabled && 
+6481-                   (customerDisplayData.paymentMethod === "transfer" || 
+6482-                    (customerDisplayData.paymentMethod === "split" && (customerDisplayData.splitTransferAmount || 0) > 0))) && (
+6483-                  (customerDisplayData.adEnabled !== false && customerDisplayData.showAdDuringCart !== false) ? (
+6484-                    <div className="flex-1 min-h-[120px] relative rounded-3xl overflow-hidden border border-slate-200 bg-white shadow-md flex flex-col p-1.5">
+6485-                      {renderCustomerAd("flex-1 w-full")}
+6486-                    </div>
+6487-                  ) : (
+6488-                    <div className="flex-1 min-h-[120px] relative rounded-3xl overflow-hidden border border-emerald-100 bg-emerald-50/20 shadow-sm flex flex-col items-center justify-center p-5 text-center animate-fade-in">
+6489-                      {storeSettingsData?.logoUrl ? (
+6490-                        <img 
+6491-                          src={storeSettingsData.logoUrl} 
+6492-                          alt="Store Logo" 
+6493-                          className="h-16 w-auto object-contain mb-2 max-w-[200px]" 
+6494-                          referrerPolicy="no-referrer" 
+6495-                        />
+6496-                      ) : (
+6497-                        <div className="bg-emerald-100/60 text-emerald-700 p-2 rounded-xl mb-2 border border-emerald-200/50 flex items-center justify-center w-24 h-12">
+6498-                          <img src="/logo.svg" alt="POS OK" className="h-full w-auto object-contain animate-pulse" />
+6499-                        </div>
+6500-                      )}
+6501-                      <h4 className="font-extrabold text-emerald-900 text-sm tracking-tight">{storeSettingsData?.name || "POS OK"}</h4>
+6502-                      <p className="text-[10px] text-emerald-700/80 mt-0.5 font-semibold">ยินดีต้อนรับและขอบคุณที่อุดหนุนค่ะ/ครับ</p>
+6503-                    </div>
+6504-                  )
+6505-                )}
+6506-
+6507-                {/* Sub status section: cash input/change */}
+6508-                {/* We only render cash/change section if PromptPay is not displayed or if paymentMethod is cash/split */}
+6509-                {(!(customerDisplayData.promptpayEnabled && customerDisplayData.paymentMethod === "transfer") || (customerDisplayData.paymentMethod === "split" && (customerDisplayData.splitCashAmount || 0) > 0)) && (
+6510-                  <div className="bg-white border border-slate-200 rounded-3xl p-4 shadow-md flex flex-col justify-center items-center text-center shrink-0">
+6511-                    {customerDisplayData.status === "paying" ? (
+6512-                      <div className="w-full space-y-2">
+6513-                        <div className="flex justify-between items-center px-1">
+6514-                          <span className="text-slate-500 text-[10px] font-bold uppercase tracking-wider">รับเงินสดมา (Cash Received)</span>
+6515-                          <p className="text-lg font-black font-mono text-slate-800">
+6516-                            ฿{parseFloat(customerDisplayData.receivedAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+6517-                          </p>
+6518-                        </div>
+6519-
+6520-                        <div className="bg-rose-50 border border-rose-200 rounded-xl p-2.5 flex justify-between items-center">
+6521-                          <span className="text-rose-700 text-[10px] font-extrabold uppercase tracking-wider flex items-center gap-1 shrink-0">
+6522-                            <Coins className="w-3.5 h-3.5" />
+6523-                            เงินทอนของท่าน (Change Due)
+6524-                          </span>
+6525-                          <p className="text-2xl font-black font-mono text-rose-650">
+6526-                            ฿{parseFloat(customerDisplayData.changeAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+6527-                          </p>
+6528-                        </div>
+6529-                      </div>
+6530-                    ) : (
+6531-                      <div className="space-y-1 py-0.5">
+6532-                        <div className="w-6 h-6 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-0.5 border border-emerald-200">
+6533-                          <Sparkles className="w-3 h-3 animate-pulse" />
+6534-                        </div>
+6535-                        <p className="text-[11px] font-bold text-slate-800">พร้อมชำระเงิน (Ready for Payment)</p>
+6536-                        <p className="text-[9px] text-slate-400 max-w-[280px] mx-auto leading-relaxed">
+6537-                          โปรดเตรียมแอปธนาคาร บัตรประชารัฐ หรือเตรียมเงินสดเพื่อจ่ายให้กับแคชเชียร์ค่ะ/ครับ
+6538-                        </p>
+6539-                      </div>
+6540-                    )}
+6541-                  </div>
+6542-                )}
+6543-
+6544-              </div>
+6545-            </div>
+6546-          )}
+6547-
+6548-          {/* Status: COMPLETED (Success checkout screen) */}
+6549-          {customerDisplayData.status === "completed" && (
+6550-            <div className="flex-1 max-w-3xl mx-auto bg-white border border-slate-200 rounded-3xl p-8 flex flex-col items-center justify-center text-center shadow-lg relative overflow-hidden my-auto h-fit py-10">
+6551-              <div className="absolute top-0 right-0 w-80 h-80 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none"></div>
+6552-              
+6553-              <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mb-4 border border-emerald-200 shadow-inner">
+6554-                <CheckCircle2 className="w-10 h-10" />
+6555-              </div>
+6556-
+6557-              <span className="bg-emerald-50 text-emerald-700 text-[10px] font-bold px-3 py-1 rounded-full border border-emerald-200 uppercase tracking-widest mb-2">
+6558-                POS OK Checkout
+6559-              </span>
+6560-              <h2 className="text-3xl font-extrabold text-slate-800">ชำระเงินเสร็จสิ้นแล้ว!</h2>
+6561-              <p className="text-slate-600 text-xs mt-2 max-w-md">
+6562-                บันทึกการสั่งซื้อบิลเลขที่ <span className="font-mono font-bold text-emerald-700">{customerDisplayData.billNumber}</span> สำเร็จ ขอบคุณที่ไว้วางใจเลือกซื้อสินค้าของเราค่ะ/ครับ
+6563-              </p>
+6564-
+6565-              {/* Receipt statistics */}
+6566-              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 w-full max-w-md mt-6 grid grid-cols-2 gap-4 divide-x divide-slate-200">
+6567-                <div className="text-center">
+6568-                  <p className="text-xs text-slate-500">ยอดชำระทั้งหมด</p>
+6569-                  <p className="text-2xl font-extrabold font-mono text-emerald-700 mt-1">
+6570-                    ฿{parseFloat(customerDisplayData.totalAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+6571-                  </p>
+6572-                </div>
+6573-                <div className="text-center pl-4">
+6574-                  <p className="text-xs text-slate-500">เงินทอนของท่าน</p>
+6575-                  <p className="text-2xl font-extrabold font-mono text-rose-650 mt-1">
+6576-                    ฿{parseFloat(customerDisplayData.changeAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+6577-                  </p>
+6578-                </div>
+6579-              </div>
+6580-
+6581-              {/* Payment Details block */}
+6582-              <div className="w-full max-w-md mt-4 bg-slate-50 border border-slate-150 rounded-2xl p-4 text-left text-xs text-slate-600 space-y-2.5">
+6583-                <div className="flex justify-between items-center border-b border-slate-200 pb-2">
+6584-                  <span className="text-slate-500">ช่องทางการชำระเงิน:</span>
+6585-                  <span className="font-bold text-slate-800">
+6586-                    {customerDisplayData.paymentMethod === "cash" ? (
+6587-                      <>💵 เงินสด (Cash)</>
+6588-                    ) : customerDisplayData.paymentMethod === "transfer" ? (
+6589-                      <>📱 เงินโอน (Bank Transfer)</>
+6590-                    ) : customerDisplayData.paymentMethod === "card" ? (
+6591-                      <>💳 บัตรเครดิต/เดบิต</>
+6592-                    ) : customerDisplayData.paymentMethod === "credit" ? (
+6593-                      <>🤝 ขายเชื่อ (Credit Sales)</>
+6594-                    ) : customerDisplayData.paymentMethod === "welfare" ? (
+6595-                      <>💳 บัตรประชารัฐ (Welfare)</>
+6596-                    ) : customerDisplayData.paymentMethod === "split" ? (
+6597-                      <>🔄 แยกจ่าย (Split Payment)</>
+6598-                    ) : (
+6599-                      <>🏷️ ชำระเงินอื่นๆ</>
+6600-                    )}
+6601-                  </span>
+6602-                </div>
+6603-                {customerDisplayData.paymentMethod === "split" && (
+6604-                  <div className="space-y-1 font-mono text-[11px] text-slate-500 pt-1">
+6605-                    {customerDisplayData.splitCashAmount !== null && customerDisplayData.splitCashAmount !== undefined && customerDisplayData.splitCashAmount > 0 && (
+6606-                      <div className="flex justify-between">
+6607-                        <span>💵 ชำระด้วยเงินสด:</span>
+6608-                        <span className="text-slate-800 font-bold">฿{parseFloat(customerDisplayData.splitCashAmount.toString()).toFixed(2)}</span>
+6609-                      </div>
+6610-                    )}
+6611-                    {customerDisplayData.splitTransferAmount !== null && customerDisplayData.splitTransferAmount !== undefined && customerDisplayData.splitTransferAmount > 0 && (
+6612-                      <div className="flex justify-between">
+6613-                        <span>📱 ชำระด้วยเงินโอน:</span>
+6614-                        <span className="text-slate-800 font-bold">฿{parseFloat(customerDisplayData.splitTransferAmount.toString()).toFixed(2)}</span>
+6615-                      </div>
+6616-                    )}
+6617-                    {customerDisplayData.splitWelfareAmount !== null && customerDisplayData.splitWelfareAmount !== undefined && customerDisplayData.splitWelfareAmount > 0 && (
+6618-                      <div className="flex justify-between">
+6619-                        <span>💳 ชำระด้วยบัตรประชารัฐ:</span>
+6620-                        <span className="text-slate-800 font-bold">฿{parseFloat(customerDisplayData.splitWelfareAmount.toString()).toFixed(2)}</span>
+6621-                      </div>
+6622-                    )}
+6623-                  </div>
+6624-                )}
+6625-              </div>
+6626-
+6627-              <p className="text-slate-400 text-xs mt-6 italic animate-pulse">
+6628-                เตรียมพร้อมทำรายการใหม่ในอีกสักครู่ (Ready for next order...)
+6629-              </p>
+6630-            </div>
+6631-          )}
+6632-
+6633-        </div>
+6634-      </div>
+6635-    ) as any;
+6636-  }
+6637-
+6638-  if (!isLoggedIn) {
+6639-    return renderScaledContent(
+6640-      <div className="h-full w-full bg-slate-100 flex items-center justify-center p-4 font-sans overflow-hidden">
+6641-        <div className="bg-white max-w-md w-full rounded-3xl shadow-xl overflow-hidden border border-slate-200">
+6642-          <div className="bg-emerald-700 p-8 text-center">
+6643-            <div className="mx-auto w-40 h-16 flex items-center justify-center mb-4">
+6644-              <img src="/logo.svg" alt="POS OK Logo" className="h-full w-auto object-contain drop-shadow-md" />
+6645-            </div>
+6646-            <h1 className="text-2xl font-bold text-white tracking-tight">POS OK</h1>
+6647-            <p className="text-emerald-100 mt-1 text-sm">เข้าสู่ระบบเพื่อใช้งาน</p>
+6648-          </div>
+6649-          
+6650-          <form onSubmit={handleLoginSubmit} className="p-8">
+6651-            {authError && (
+6652-              <div className="bg-rose-50 text-rose-600 text-xs p-3 rounded-xl mb-4 font-bold border border-rose-100">
+6653-                {authError}
+6654-              </div>
+6655-            )}
+6656-            
+6657-            <div className="mb-4">
+6658-              <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">ชื่อผู้ใช้งาน (Username)</label>
+6659-              <input
+6660-                ref={loginUsernameRef}
+6661-                type="text"
+6662-                value={loginUsername}
+6663-                onChange={e => setLoginUsername(e.target.value)}
+6664-                placeholder="กรอกชื่อผู้ใช้งาน"
+6665-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors"
+6666-                required
+6667-                autoFocus
+6668-                onKeyDown={(e) => {
+6669-                  if (e.key === "ArrowDown") {
+6670-                    e.preventDefault();
+6671-                    loginPasswordRef.current?.focus();
+6672-                  } else if (e.key === "Enter") {
+6673-                    if (!loginPassword) {
+6674-                      e.preventDefault();
+6675-                      loginPasswordRef.current?.focus();
+6676-                    }
+6677-                  }
+6678-                }}
+6679-              />
+6680-            </div>
+6681-            
+6682-            <div className="mb-6">
+6683-              <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">รหัสผ่าน (Password/PIN)</label>
+6684-              <div className="relative">
+6685-                <input
+6686-                  ref={loginPasswordRef}
+6687-                  type={showPassword ? "text" : "password"}
+6688-                  value={loginPassword}
+6689-                  onChange={e => setLoginPassword(e.target.value)}
+6690-                  placeholder="กรอกรหัสผ่านของคุณ"
+6691-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-4 pr-12 py-3 text-sm focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors"
+6692-                  required
+6693-                  onKeyDown={(e) => {
+6694-                    if (e.key === "ArrowUp") {
+6695-                      e.preventDefault();
+6696-                      loginUsernameRef.current?.focus();
+6697-                    }
+6698-                  }}
+6699-                />
+6700-                <button
+6701-                  type="button"
+6702-                  onClick={() => setShowPassword(!showPassword)}
+6703-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none p-1"
+6704-                >
+6705-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+6706-                </button>
+6707-              </div>
+6708-            </div>
+6709-
+6710-            <div className="mb-6">
+6711-              <label className="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wide">โหมดการทำงาน (Operation Mode)</label>
+6712-              <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-xl">
+6713-                <button
+6714-                  type="button"
+6715-                  onClick={() => setLoginMode('desktop')}
+6716-                  className={`py-2.5 text-xs font-bold rounded-lg transition-all ${
+6717-                    loginMode === 'desktop'
+6718-                      ? 'bg-white text-emerald-700 shadow-sm'
+6719-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50/50'
+6720-                  }`}
+6721-                >
+6722-                  🖥️ โหมดคอมพิวเตอร์หลัก (Desktop)
+6723-                </button>
+6724-                <button
+6725-                  type="button"
+6726-                  onClick={() => setLoginMode('mobile')}
+6727-                  className={`py-2.5 text-xs font-bold rounded-lg transition-all ${
+6728-                    loginMode === 'mobile'
+6729-                      ? 'bg-white text-emerald-700 shadow-sm'
+6730-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50/50'
+6731-                  }`}
+6732-                >
+6733-                  📱 โหมดหลังบ้านบนมือถือ (Mobile)
+6734-                </button>
+6735-              </div>
+6736-            </div>
+6737-            
+6738-            <button
+6739-              type="submit"
+6740-              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-xl transition-colors text-sm shadow-md"
+6741-            >
+6742-              ลงชื่อเข้าใช้ (Login)
+6743-            </button>
+6744-
+6745-
+6746-            
+6747-            <div className="mt-5 border-t border-slate-100 pt-4 text-center flex flex-col gap-3">
+6748-              <button
+6749-                type="button"
+6750-                onClick={toggleFullscreen}
+6751-                className="text-xs font-bold text-indigo-600 hover:text-indigo-700 hover:underline flex items-center justify-center gap-1.5 mx-auto focus:outline-none"
+6752-              >
+6753-                {isFullscreen ? "🗖 ออกจากโหมดเต็มจอ (Exit Fullscreen)" : "🖥️ เปิดโหมดเต็มหน้าจอ (Fullscreen Mode)"}
+6754-              </button>
+6755-              
+6756-              <button
+6757-                type="button"
+6758-                onClick={() => {
+6759-                  setIsCustomerDisplayState(true);
+6760-                  window.history.pushState({}, "", `?view=customer&terminalId=${terminalId}`);
+6761-                }}
+6762-                className="text-xs font-bold text-emerald-600 hover:text-emerald-700 hover:underline flex items-center justify-center gap-1.5 mx-auto focus:outline-none"
+6763-              >
+6764-                🖥️ เปิดหน้าจอฝั่งลูกค้า (Customer Display Mode)
+6765-              </button>
+6766-            </div>
+6767-          </form>
+6768-        </div>
+6769-      </div>
+6770-    ) as any;
+6771-  }
+6772-
+6773-  return renderScaledContent(
+6774-    <>
+6775-      {/* Toast Notification Container */}
+6776-      <div className="fixed bottom-4 left-4 z-[9999] flex flex-col gap-1.5">
+6777-        {toastMessages.map(toast => (
+6778-          <div key={toast.id} className={`max-w-xs w-full shadow-md rounded-lg pointer-events-auto flex items-start gap-2 p-2.5 border animate-in slide-in-from-left-8 fade-in duration-300 ${toast.type === 'error' ? 'bg-red-50 border-red-200' : toast.type === 'success' ? 'bg-emerald-50 border-emerald-200' : 'bg-amber-50 border-amber-200'}`}>
+6779-            <div className={`mt-0.5 ${toast.type === 'error' ? 'text-red-500' : toast.type === 'success' ? 'text-emerald-500' : 'text-amber-500'}`}>
+6780-              {toast.type === 'success' ? <CheckCircle2 className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
+6781-            </div>
+6782-            <div className={`flex-1 text-[11px] font-semibold leading-snug ${toast.type === 'error' ? 'text-red-800' : toast.type === 'success' ? 'text-emerald-800' : 'text-amber-800'}`}>
+6783-              {toast.text}
+6784-            </div>
+6785-            <button onClick={() => setToastMessages(prev => prev.filter(t => t.id !== toast.id))} className="text-slate-400 hover:text-slate-600">
+6786-              <X className="w-3.5 h-3.5" />
+6787-            </button>
+6788-          </div>
+6789-        ))}
+6790-      </div>
+6791-
+6792-      <div id="workspace-root" className="h-full w-full bg-slate-50 text-slate-800 flex flex-col font-sans select-none overflow-hidden">
+6793-      {/* Top Banner & Active POS Cashier Session Panel */}
+6794-      <header id="navbar-header" className={`bg-gradient-to-r from-emerald-700 via-emerald-800 to-teal-900 text-white shadow-md z-10 shrink-0 select-none flex justify-between items-center flex-nowrap ${isSmallRes ? "px-2 py-1 gap-1.5" : "px-4 py-2 gap-2 lg:gap-0"}`}>
+6795-        <div id="navbar-logo-area" className={`flex items-center shrink-0 ${isSmallRes ? "gap-1.5" : "gap-3"}`}>
+6796-          <div className={`bg-white/10 rounded-lg backdrop-blur-md border border-white/20 flex items-center justify-center ${isSmallRes ? "p-1 h-6" : "p-1.5 h-8"}`}>
+6797-            <img src="/logo.svg" alt="POS OK" className="h-full w-auto object-contain" />
+6798-          </div>
+6799-          <div className="leading-tight">
+6800-            <h1 className={`font-extrabold tracking-tight font-sans whitespace-nowrap ${isSmallRes ? "text-xs" : "text-sm lg:text-base"}`}>POS OK</h1>
+6801-            {!isSmallRes && <p className="text-[9px] text-emerald-200/95 font-sans whitespace-nowrap">ระบบจัดการขายปลีก-ส่ง หลายหน่วยนับ</p>}
+6802-          </div>
+6803-          {/* Real-time Clock display */}
+6804-          <div className="flex items-center h-6 px-2 py-0.5 rounded-lg bg-emerald-950/45 border border-emerald-500/10 text-[10px] sm:text-xs font-mono font-bold text-emerald-100 select-none shadow-inner">
+6805-            <span className="inline-block w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse mr-1.5"></span>
+6806-            {currentSystemTime}
+6807-          </div>
+6808-        </div>
+6809-
+6810-        {/* Top middle tabs toggle */}
+6811-        <nav id="navbar-tabs" className={`hidden lg:flex bg-emerald-950/40 rounded-xl border border-emerald-500/10 gap-0.5 shrink-0 ${isSmallRes ? "p-0.5" : "p-1"}`}>
+6812-          {loginMode !== 'mobile' && (!currentUser || currentUser.canAccessPos) && (
+6813-            <button
+6814-              id="tab-pos-btn"
+6815-              onClick={() => setActiveTab("pos")}
+6816-              className={`flex items-center transition-all focus:outline-none ${
+6817-                isSmallRes ? "gap-1 px-1.5 py-0.5 text-[10px] rounded-md" : "gap-1.5 px-3 py-1 rounded-lg text-xs"
+6818-              } ${
+6819-                activeTab === "pos"
+6820-                  ? "bg-emerald-600 text-white font-semibold shadow-sm"
+6821-                  : "text-emerald-100 hover:bg-white/10 hover:text-white"
+6822-              }`}
+6823-            >
+6824-              <ShoppingCart className={isSmallRes ? "w-3 h-3" : "w-3.5 h-3.5"} />
+6825-              {t[lang].pos}
+6826-            </button>
+6827-          )}
+6828-          {(!currentUser || currentUser.canManageStock || currentUser.canManageBackend) && (
+6829-            <button
+6830-              id="tab-products-btn"
+6831-              onClick={() => setActiveTab("products")}
+6832-              className={`flex items-center transition-all focus:outline-none ${
+6833-                isSmallRes ? "gap-1 px-1.5 py-0.5 text-[10px] rounded-md" : "gap-1.5 px-3 py-1 rounded-lg text-xs"
+6834-              } ${
+6835-                activeTab === "products"
+6836-                  ? "bg-emerald-600 text-white font-semibold shadow-sm"
+6837-                  : "text-emerald-100 hover:bg-white/10 hover:text-white"
+6838-              }`}
+6839-            >
+6840-              <Database className={isSmallRes ? "w-3 h-3" : "w-3.5 h-3.5"} />
+6841-              {t[lang].inventory}
+6842-            </button>
+6843-          )}
+6844-          {(loginMode === 'mobile' || !currentUser || currentUser.canManageBackend || currentUser.canManageStock || currentUser.canManagePromotions || currentUser.canViewReports) && (
+6845-            <button
+6846-              id="tab-dashboard-btn"
+6847-              onClick={() => setActiveTab("dashboard")}
+6848-              className={`flex items-center transition-all focus:outline-none ${
+6849-                isSmallRes ? "gap-1 px-1.5 py-0.5 text-[10px] rounded-md" : "gap-1.5 px-3 py-1 rounded-lg text-xs"
+6850-              } ${
+6851-                activeTab === "dashboard"
+6852-                  ? "bg-emerald-600 text-white font-semibold shadow-sm"
+6853-                  : "text-emerald-100 hover:bg-white/10 hover:text-white"
+6854-              }`}
+6855-            >
+6856-              <TrendingUp className={isSmallRes ? "w-3 h-3" : "w-3.5 h-3.5"} />
+6857-              {t[lang].dashboard}
+6858-            </button>
+6859-          )}
+6860-          {(!currentUser || currentUser.canViewHistory) && (
+6861-            <button
+6862-              id="tab-audit-btn"
+6863-              onClick={() => setActiveTab("audit")}
+6864-              className={`flex items-center transition-all focus:outline-none ${
+6865-                isSmallRes ? "gap-1 px-1.5 py-0.5 text-[10px] rounded-md" : "gap-1.5 px-3 py-1 rounded-lg text-xs"
+6866-              } ${
+6867-                activeTab === "audit"
+6868-                  ? "bg-emerald-600 text-white font-semibold shadow-sm"
+6869-                  : "text-emerald-100 hover:bg-white/10 hover:text-white"
+6870-              }`}
+6871-            >
+6872-              <ShieldCheck className={isSmallRes ? "w-3 h-3" : "w-3.5 h-3.5"} />
+6873-              {t[lang].audit}
+6874-            </button>
+6875-          )}
+6876-          {loginMode !== 'mobile' && (!currentUser || currentUser.canAccessPos) && storeSettingsData?.enableBillPayment !== false && (
+6877-            <button
+6878-              id="tab-bills-btn"
+6879-              onClick={() => setActiveTab("bills")}
+6880-              className={`flex items-center transition-all focus:outline-none ${
+6881-                isSmallRes ? "gap-1 px-1.5 py-0.5 text-[10px] rounded-md" : "gap-1.5 px-3 py-1 rounded-lg text-xs"
+6882-              } ${
+6883-                activeTab === "bills"
+6884-                  ? "bg-emerald-600 text-white font-semibold shadow-sm"
+6885-                  : "text-emerald-100 hover:bg-white/10 hover:text-white"
+6886-              }`}
+6887-            >
+6888-              <FileText className={isSmallRes ? "w-3 h-3" : "w-3.5 h-3.5"} />
+6889-              รับชำระบิล
+6890-            </button>
+6891-          )}
+6892-        </nav>
+6893-
+6894-        {/* Switch Cashier Session Dropdown Indicator */}
+6895-        <div id="user-session-control" className={`flex items-center shrink-0 ${isSmallRes ? "gap-1" : "gap-1.5"}`}>
+6896-          <div className={`bg-teal-950/40 rounded-lg border border-teal-500/10 flex items-center gap-1.5 text-right shrink-0 ${isSmallRes ? "px-1.5 py-0.5" : "px-2 py-0.5"}`}>
+6897-            <div>
+6898-              {!isSmallRes && <p className="text-[8px] text-teal-300 font-sans tracking-wider uppercase leading-none">ผู้ใช้งาน</p>}
+6899-              <p className={`font-semibold text-white leading-tight ${isSmallRes ? "text-[10px]" : "text-[11px]"}`}>{currentUser?.name || "ไม่ได้ระบุกะ"}</p>
+6900-            </div>
+6901-            {!isSmallRes && (
+6902-              <div className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-1.5 py-0.5 rounded font-bold text-[9px] uppercase tracking-wide">
+6903-                {currentUser?.role}
+6904-              </div>
+6905-            )}
+6906-          </div>
+6907-
+6908-          {isShiftSystemEnabled && activeShift && (
+6909-            <div className={`flex shrink-0 ${isSmallRes ? "gap-0.5" : "gap-1"}`}>
+6910-              <button
+6911-                id="quick-expense-btn"
+6912-                type="button"
+6913-                onClick={() => {
+6914-                  setActiveTab("dashboard");
+6915-                  setDashboardSubTab("expenses");
+6916-                }}
+6917-                className={`bg-rose-600 hover:bg-rose-500 border border-rose-500/30 text-white font-semibold flex items-center gap-1 transition-colors focus:outline-none shrink-0 ${
+6918-                  isSmallRes ? "rounded-md px-1.5 py-0.5 text-[10px]" : "rounded-lg px-2.5 py-1 text-[11px]"
+6919-                }`}
+6920-              >
+6921-                <Receipt className={isSmallRes ? "w-2.5 h-2.5" : "w-3 h-3"} /> {isSmallRes ? "ถอนเงิน" : "นำเงินออก"}
+6922-              </button>
+6923-              <button
+6924-                id="close-shift-btn"
+6925-                type="button"
+6926-                onClick={() => setIsCloseShiftModalOpen(true)}
+6927-                className={`bg-orange-600 hover:bg-orange-500 border border-orange-500/30 text-white font-semibold flex items-center gap-1 transition-colors focus:outline-none shrink-0 ${
+6928-                  isSmallRes ? "rounded-md px-1.5 py-0.5 text-[10px]" : "rounded-lg px-2.5 py-1 text-[11px]"
+6929-                }`}
+6930-              >
+6931-                <Clock className={isSmallRes ? "w-2.5 h-2.5" : "w-3 h-3"} /> ปิดกะ
+6932-              </button>
+6933-            </div>
+6934-          )}
+6935-
+6936-          {/* Fullscreen Button */}
+6937-          <button
+6938-            id="fullscreen-toggle-btn"
+6939-            type="button"
+6940-            onClick={toggleFullscreen}
+6941-            className={`bg-emerald-900/80 hover:bg-emerald-800 border border-emerald-500/30 text-white font-semibold flex items-center gap-1.5 transition-colors focus:outline-none shrink-0 ${
+6942-              isSmallRes ? "rounded-md px-1.5 py-0.5 text-[10px]" : "rounded-lg px-2.5 py-1 text-[11px]"
+6943-            }`}
+6944-            title="สลับโหมดเต็มหน้าจอ (Fullscreen)"
+6945-          >
+6946-            {isFullscreen ? (
+6947-              <>
+6948-                <Minimize2 className={isSmallRes ? "w-2.5 h-2.5" : "w-3 h-3"} />
+6949-                {!isSmallRes && <span>ลดขนาด</span>}
+6950-              </>
+6951-            ) : (
+6952-              <>
+6953-                <Maximize2 className={isSmallRes ? "w-2.5 h-2.5" : "w-3 h-3"} />
+6954-                {!isSmallRes && <span>เต็มจอ</span>}
+6955-              </>
+6956-            )}
+6957-          </button>
+6958-
+6959-          {/* Language Switch Button */}
+6960-          <button
+6961-            id="lang-toggle-btn"
+6962-            type="button"
+6963-            onClick={() => setLang(lang === "th" ? "en" : "th")}
+6964-            className={`bg-emerald-900/80 hover:bg-emerald-800 border border-emerald-500/30 text-white font-semibold flex items-center gap-1 transition-colors focus:outline-none shrink-0 ${
+6965-              isSmallRes ? "rounded-md px-1.5 py-0.5 text-[10px]" : "rounded-lg px-2 py-1 text-[11px]"
+6966-            }`}
+6967-          >
+6968-            {lang === "th" ? "EN" : "ไทย"}
+6969-          </button>
+6970-          
+6971-          <button
+6972-            id="logout-btn"
+6973-            type="button"
+6974-            onClick={() => {
+6975-              if (currentUser) {
+6976-                logAuditEvent("user_logout", currentUser.id, currentUser.id, `🚪 ผู้ใช้ ${currentUser.name} (${currentUser.role}) ได้กดออกจากระบบอย่างถูกต้อง`);
+6977-              }
+6978-              setIsLoggedIn(false);
+6979-              setCurrentUser(null);
+6980-              setLoginUsername("");
+6981-              setLoginPassword("");
+6982-              setCart([]);
+6983-            }}
+6984-            className={`bg-red-600 hover:bg-red-500 border border-red-500/30 text-white font-bold flex items-center gap-1 transition-colors focus:outline-none shrink-0 cursor-pointer shadow-sm ${
+6985-              isSmallRes ? "rounded-md px-1.5 py-0.5 text-[10px]" : "rounded-lg px-2.5 py-1 text-[11px]"
+6986-            }`}
+6987-          >
+6988-            <LogOut className={isSmallRes ? "w-2.5 h-2.5" : "w-3 h-3"} />
+6989-            <span>{isSmallRes ? "ออกระบบ" : "ออกจากระบบ"}</span>
+6990-          </button>
+6991-        </div>
+6992-      </header>
+6993-
+6994-      {/* Mobile top navigation strip */}
+6995-      <div id="mobile-navigation" className="lg:hidden flex bg-emerald-900 border-b border-emerald-950 text-white text-xs divide-x divide-emerald-950 justify-around">
+6996-        {loginMode !== 'mobile' && (!currentUser || currentUser.canAccessPos) && (
+6997-          <button id="mob-pos" onClick={() => setActiveTab("pos")} className={`flex-1 py-3 text-center font-medium ${activeTab === 'pos' ? 'bg-emerald-700 text-white' : 'text-emerald-200'}`}>หน้าขาย POS</button>
+6998-        )}
+6999-        {(!currentUser || currentUser.canManageStock || currentUser.canManageBackend) && (
+7000-          <button id="mob-prod" onClick={() => setActiveTab("products")} className={`flex-1 py-3 text-center font-medium ${activeTab === 'products' ? 'bg-emerald-700 text-white' : 'text-emerald-200'}`}>คลัง & หน่วยนับ</button>
+7001-        )}
+7002-        {(loginMode === 'mobile' || !currentUser || currentUser.canManageBackend || currentUser.canManageStock || currentUser.canManagePromotions || currentUser.canViewReports) && (
+7003-          <button id="mob-dash" onClick={() => setActiveTab("dashboard")} className={`flex-1 py-3 text-center font-medium ${activeTab === 'dashboard' ? 'bg-emerald-700 text-white' : 'text-emerald-200'}`}>แดชบอร์ด</button>
+7004-        )}
+7005-        {(!currentUser || currentUser.canViewHistory) && (
+7006-          <button id="mob-aud" onClick={() => setActiveTab("audit")} className={`flex-1 py-3 text-center font-medium ${activeTab === 'audit' ? 'bg-emerald-700 text-white' : 'text-emerald-200'}`}>บันทึกบิล</button>
+7007-        )}
+7008-        {loginMode !== 'mobile' && (!currentUser || currentUser.canAccessPos) && storeSettingsData?.enableBillPayment !== false && (
+7009-          <button id="mob-bills" onClick={() => setActiveTab("bills")} className={`flex-1 py-3 text-center font-medium ${activeTab === 'bills' ? 'bg-emerald-700 text-white' : 'text-emerald-200'}`}>จ่ายบิล</button>
+7010-        )}
+7011-      </div>
+7012-
+7013-      {/* Main Workspace Frame container */}
+7014-      <main id="main-content-layout" className={`flex-1 w-full max-w-[1800px] mx-auto flex flex-col min-h-0 ${activeTab === "pos" ? "h-[calc(100vh-58px)] overflow-hidden p-2" : "p-4 md:p-6 overflow-y-auto"}`}>
+7015-        
+7016-        {/* VIEW 1: FRONTEND POS CASHIER REGISTER */}
+7017-        {activeTab === "pos" && (
+7018-          isShiftLoading ? (
+7019-            <div className="flex-1 flex items-center justify-center">
+7020-              <div className="flex flex-col items-center gap-3">
+7021-                <div className="w-10 h-10 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
+7022-                <p className="text-slate-500 font-medium">กำลังโหลดข้อมูลกะ...</p>
+7023-              </div>
+7024-            </div>
+7025-          ) : isShiftSystemEnabled && !activeShift ? (
+7026-            <div id="pos-shift-gate-overlay" className="flex-1 flex flex-col justify-center items-center p-6 font-sans">
+7027-              <div className="w-full max-w-md bg-white rounded-3xl border border-slate-200/80 shadow-xl p-8 animate-scaleIn text-center flex flex-col gap-6"
+7028-                tabIndex={0}
+7029-                onKeyDown={(e) => {
+7030-                  if (e.key === "Enter") {
+7031-                    e.preventDefault();
+7032-                    handleOpenShiftSubmit(e as any);
+7033-                  }
+7034-                }}
+7035-              >
+7036-                <div className="w-16 h-16 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center mx-auto border border-indigo-100 shadow-inner">
+7037-                  <Clock className="w-8 h-8 animate-pulse" />
+7038-                </div>
+7039-                <div>
+7040-                  <h2 className="font-extrabold text-slate-800 text-lg tracking-tight">ระบบเปิดกะการทำงานพนักงาน</h2>
+7041-                  <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
+7042-                    เนื่องจากเปิดใช้งานโหมดควบคุมความปลอดภัยกะพนักงาน แคชเชียร์ทุกคนจำเป็นต้องบันทึกยอดเงินทอนเริ่มต้นในลิ้นชัก เพื่อกระทบยอดเงินสดเมื่อทำการ "ปิดกะ"
+7043-                  </p>
+7044-                </div>
+7045-
+7046-                <form onSubmit={handleOpenShiftSubmit} className="flex flex-col gap-4 text-left">
+7047-                  <div className="flex flex-col gap-1 text-xs">
+7048-                    <label className="font-bold text-slate-700 flex items-center gap-1">
+7049-                      <span>👤 สิทธิ์แคชเชียร์ประจำเครื่อง:</span>
+7050-                    </label>
+7051-                    <div className="bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-4 text-slate-800 font-semibold text-xs">
+7052-                      {currentUser?.name || "พนักงานทั่วไป"} ({currentUser?.role})
+7053-                    </div>
+7054-                  </div>
+7055-
+7056-                  <div className="flex flex-col gap-1 text-xs">
+7057-                    <label htmlFor="startingCash" className="font-bold text-slate-700 flex items-center gap-1">
+7058-                      <span>💵 ระบุยอดเงินทอนเริ่มต้นกะ (Starting Cash Drawer):</span>
+7059-                    </label>
+7060-                    <div className="relative">
+7061-                      <input
+7062-                        id="startingCash"
+7063-                        ref={startingCashRef}
+7064-                        required
+7065-                        type="number"
+7066-                        step="0.01"
+7067-                        inputMode="decimal"
+7068-                        autoFocus
+7069-                        placeholder="0.00"
+7070-                        className="w-full bg-white border-2 border-slate-200 rounded-2xl py-4 px-6 pl-12 text-2xl font-mono font-bold text-slate-800 focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 transition-all"
+7071-                        value={startingCash}
+7072-                        onChange={(e) => setStartingCash(e.target.value)}
+7073-                        onKeyDown={(e) => {
+7074-                          if (e.key === "Enter") {
+7075-                            e.preventDefault();
+7076-                            handleOpenShiftSubmit(e as any);
+7077-                          }
+7078-                        }}
+7079-                      />
+7080-                      <span className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-2xl font-mono">฿</span>
+7081-                    </div>
+7082-                  </div>
+7083-
+7084-                  <button
+7085-                    type="submit"
+7086-                    disabled={isProcessingShift}
+7087-                    className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-400 text-white font-bold py-4 rounded-2xl text-sm transition-all shadow-lg shadow-indigo-100 uppercase tracking-wider active:scale-95 flex items-center justify-center gap-2"
+7088-                  >
+7089-                    {isProcessingShift ? (
+7090-                      <>
+7091-                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+7092-                        กำลังประมวลผล...
+7093-                      </>
+7094-                    ) : (
+7095-                      <>✓ เริ่มเปิดกะทำงานขายของ [ENTER]</>
+7096-                    )}
+7097-                  </button>
+7098-                </form>
+7099-              </div>
+7100-            </div>
+7101-          ) : (

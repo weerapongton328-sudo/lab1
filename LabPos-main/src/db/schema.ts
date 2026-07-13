@@ -245,6 +245,7 @@ export const storeSettings = pgTable('store_settings', {
   promptpayEnabled: boolean('promptpay_enabled').notNull().default(false),
   promptpayNumber: text('promptpay_number'),
   promptpayName: text('promptpay_name'),
+  promptpayQrUrl: text('promptpay_qr_url'),
   enableAdvancedInventory: boolean('enable_advanced_inventory').notNull().default(false),
   enableTaxInvoice: boolean('enable_tax_invoice').notNull().default(false),
   vatRate: text('vat_rate').notNull().default('7.00'),

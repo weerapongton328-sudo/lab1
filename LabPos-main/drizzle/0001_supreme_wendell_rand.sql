@@ -1,0 +1,1 @@
+ALTER TABLE "store_settings" ADD COLUMN "promptpay_qr_url" text;
