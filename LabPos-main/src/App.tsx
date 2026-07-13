@@ -91,7 +91,7 @@ export const convertThaiToEngKeyboard = (input: string): string => {
     // Row 1 (shifted)
     '+': '!', '๑': '@', '๒': '#', '๓': '$', '๔': '%', 'ู': '^', '฿': '&', '๕': '*', '๖': '(', '๗': ')', '๘': '_', '๙': '+',
     // Row 2 (shifted)
-    '๐': '0', '"': 'W', 'ฎ': 'E', 'ฑ': 'R', 'ธ': 'T', 'ํ': 'Y', 'ณ': 'U', 'ญ': 'O', 'ฐ': 'P', 'ฅ': '|',
+    '๐': 'Q', '"': 'W', 'ฎ': 'E', 'ฑ': 'R', 'ธ': 'T', 'ํ': 'Y', 'ณ': 'U', 'ญ': 'I', 'ฐ': 'O', 'ฅ': 'P', 'ฅ': '|',
     // Row 3 (shifted)
     'ฤ': 'A', 'ฆ': 'S', 'ฏ': 'D', 'โ': 'F', 'ฌ': 'G', '็': 'H', '๋': 'J', 'ษ': 'K', 'ศ': 'L', 'ซ': ':',
     // Row 4 (shifted)
@@ -1415,6 +1415,7 @@ export default function App() {
 
   // Barcode Auto-Focus Input Target Ref
   const barcodeInputRef = useRef<HTMLInputElement>(null);
+  const scanTimeoutRef = useRef<any>(null);
 
   // Hotkey overlay and state variables
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
@@ -1821,26 +1822,25 @@ export default function App() {
     return new Uint8Array(bytes);
   };
 
-  // Web Serial Printer Sender
+  // Web Serial Printer Sender - Redirected to LPT1 backend printing
   const printReceiptViaSerial = async (data: Uint8Array) => {
-    if (!("serial" in navigator)) {
-      showToast("เบราว์เซอร์ของคุณไม่รองรับการพิมพ์ผ่าน USB Serial (กรุณาใช้ Chrome หรือ Edge และเชื่อมต่อทางพอร์ต USB)", "error");
-      return;
-    }
     try {
-      const ports = await (navigator as any).serial.getPorts();
-      let port = ports[0];
-      if (!port) {
-        port = await (navigator as any).serial.requestPort();
+      const response = await fetch("/api/print-receipt", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          receiptBytes: Array.from(data),
+        }),
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || "เกิดข้อผิดพลาดในการพิมพ์ผ่านเซิร์ฟเวอร์");
       }
-      await port.open({ baudRate: 9600 });
-      const writer = port.writable.getWriter();
-      await writer.write(data);
-      writer.releaseLock();
-      await port.close();
-      showToast("ส่งคำสั่งพิมพ์ไปยังเครื่องพิมพ์ USB Serial สำเร็จ", "success");
+      showToast("ส่งคำสั่งพิมพ์ไปยังเครื่องพิมพ์ LPT1 หลังบ้านสำเร็จ", "success");
     } catch (err: any) {
-      console.error("USB Serial Printer Error:", err);
+      console.error("LPT1 Printer Error:", err);
       showToast(`พิมพ์ใบเสร็จล้มเหลว: ${err.message || err}`, "error");
     }
   };
@@ -4442,10 +4442,32 @@ export default function App() {
     }
   };
 
+  // Barcode input change handler with built-in layout mapping and debounce auto-submit
+  const handleBarcodeChange = (val: string) => {
+    const converted = convertThaiToEngKeyboard(val);
+    setBarcodeSearch(converted);
+
+    if (scanTimeoutRef.current) {
+      clearTimeout(scanTimeoutRef.current);
+    }
+
+    if (converted.trim()) {
+      scanTimeoutRef.current = setTimeout(() => {
+        // Auto-submit after 80ms of inactivity (indicative of scanner burst ending)
+        if (converted.trim().length >= 3) {
+          handleBarcodeSubmit(undefined, converted.trim());
+        }
+      }, 80);
+    }
+  };
+
   // Global Barcode Scan Event Dispatcher
-  const handleBarcodeSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const cleanSearch = convertThaiToEngKeyboard(barcodeSearch.trim());
+  const handleBarcodeSubmit = (e?: React.FormEvent, directQuery?: string) => {
+    if (e) {
+      e.preventDefault();
+    }
+    const rawQuery = directQuery !== undefined ? directQuery : barcodeSearch;
+    const cleanSearch = convertThaiToEngKeyboard(rawQuery.trim());
     if (!cleanSearch) {
       // If pressing Enter on empty barcode and cart has items, open F9 Checkout Modal
       if (cart.length > 0 && !isPaymentModalOpen && !isSplitPaymentModalOpen) {
@@ -7008,7 +7030,7 @@ export default function App() {
                     type="text"
                     placeholder="สแกนบาร์โค้ดที่นี่... (F2 ค้นหาละเอียด, Esc ปิดหน้าต่าง)"
                     value={barcodeSearch}
-                    onChange={(e) => setBarcodeSearch(convertThaiToEngKeyboard(e.target.value))}
+                    onChange={(e) => handleBarcodeChange(e.target.value)}
                     className="w-full bg-slate-800 border border-slate-700 text-white font-mono text-sm rounded-lg py-2 px-3 pl-9 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-slate-950 transition-all text-center tracking-widest placeholder:text-slate-500"
                   />
                   <div className="absolute left-3 top-2.5 text-slate-400">

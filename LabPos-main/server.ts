@@ -19,6 +19,7 @@ const getBangkokLocalStartAndEnd = (dateStr: string) => {
 import express from "express";
 import path from "path";
 import fs from "fs";
+import iconv from "iconv-lite";
 import { db } from "./src/db/index.ts";
 import {
   users,
@@ -3872,6 +3873,43 @@ app.post("/api/clear-data", async (req, res) => {
   } catch (err: any) {
     console.error("Clear data error:", err);
     res.status(500).json({ error: `เกิดข้อผิดพลาดในการล้างข้อมูล: ${err.message}` });
+  }
+});
+
+app.post("/api/print-receipt", async (req, res) => {
+  const { receiptBytes, receiptText } = req.body;
+  if (!receiptBytes && !receiptText) {
+    return res.status(400).json({ error: "กรุณาระบุข้อมูลใบเสร็จ (receiptBytes หรือ receiptText)" });
+  }
+
+  let fd: number | undefined;
+  try {
+    let buffer: Buffer;
+    if (receiptBytes && Array.isArray(receiptBytes)) {
+      buffer = Buffer.from(receiptBytes);
+    } else {
+      // Convert receipt text to TIS-620/CP874 encoding for GP Printer (Gprinter) Thai compatibility
+      buffer = iconv.encode(receiptText, "tis-620");
+    }
+
+    // Write buffer directly to the LPT1 parallel port using synchronous file descriptor functions
+    // This ensures precise opening, writing, and absolute closing of the resource to avoid "Port Busy" or locks.
+    fd = fs.openSync("LPT1", "w");
+    fs.writeSync(fd, buffer);
+    console.log("Successfully printed receipt to LPT1");
+
+    res.json({ success: true, message: "ส่งข้อมูลพิมพ์ไปยังพอร์ต LPT1 เรียบร้อยแล้ว" });
+  } catch (err: any) {
+    console.error("LPT1 printing error:", err);
+    res.status(500).json({ error: `เกิดข้อผิดพลาดในการส่งข้อมูลไปยังพอร์ต LPT1: ${err.message}` });
+  } finally {
+    if (fd !== undefined) {
+      try {
+        fs.closeSync(fd);
+      } catch (closeErr) {
+        console.error("Error closing LPT1 file descriptor:", closeErr);
+      }
+    }
   }
 });
 
