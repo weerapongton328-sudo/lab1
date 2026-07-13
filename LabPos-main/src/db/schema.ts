@@ -117,7 +117,7 @@ export const orders = pgTable('orders', {
   vatAmount: numeric('vat_amount', { precision: 12, scale: 2 }), // For Full Tax Invoice
   subtotalBeforeVat: numeric('subtotal_before_vat', { precision: 12, scale: 2 }), // For Full Tax Invoice
   memberId: integer('member_id').references(() => members.id, { onDelete: 'set null' }),
-  pointsEarned: integer('points_earned').default(0),
+  pointsEarned: numeric('points_earned', { precision: 12, scale: 2 }).default('0.00'),
   pointsRedeemed: integer('points_redeemed').default(0),
   debtorId: integer('debtor_id').references(() => debtors.id, { onDelete: 'set null' }),
   shiftId: integer('shift_id').references(() => shifts.id, { onDelete: 'set null' }),
@@ -235,6 +235,7 @@ export const storeSettings = pgTable('store_settings', {
   receiptHeader: text('receipt_header').notNull().default('ใบเสร็จรับเงิน/ใบส่งของ'),
   taxInvoiceHeader: text('tax_invoice_header').notNull().default('ใบกำกับภาษีเต็มรูป'),
   allowNegativeStock: boolean('allow_negative_stock').notNull().default(false),
+  minPurchaseForPointsRedeem: numeric('min_purchase_for_points_redeem', { precision: 12, scale: 2 }).notNull().default('0.00'),
   pointsToDiscountRatio: numeric('points_to_discount_ratio', { precision: 12, scale: 2 }).notNull().default('0.10'), // 10 points = 1 THB default
   pointsEarnRatio: text('points_earn_ratio').notNull().default('20.00'), // 20 THB = 1 point default
   enableBillPayment: boolean('enable_bill_payment').notNull().default(true),
@@ -382,7 +383,7 @@ export const members = pgTable('members', {
   id: serial('id').primaryKey(),
   name: text('name').notNull(),
   phone: text('phone').notNull().unique(),
-  points: integer('points').notNull().default(0),
+  points: numeric('points', { precision: 12, scale: 2 }).notNull().default('0.00'),
   isDebtor: boolean('is_debtor').notNull().default(false),
   creditLimit: numeric('credit_limit', { precision: 12, scale: 2 }).notNull().default('0.00'),
   currentBalance: numeric('current_balance', { precision: 12, scale: 2 }).notNull().default('0.00'),

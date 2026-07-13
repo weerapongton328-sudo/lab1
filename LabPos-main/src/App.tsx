@@ -730,6 +730,7 @@ export default function App() {
     splitCashAmount?: number | null;
     splitTransferAmount?: number | null;
     splitWelfareAmount?: number | null;
+    memberInfo?: { name: string, phone: string, points: number, earnedPoints: number } | null;
     adUrl?: string;
     adType?: "video" | "image" | "slideshow" | "folder";
     adEnabled?: boolean;
@@ -751,6 +752,7 @@ export default function App() {
     splitCashAmount: null,
     splitTransferAmount: null,
     splitWelfareAmount: null,
+    memberInfo: null,
     adUrl: "",
     adType: "folder",
     adEnabled: true,
@@ -1224,6 +1226,7 @@ export default function App() {
   const [storeAllowNegativeStock, setStoreAllowNegativeStock] = useState(false);
   const [storePointsToDiscountRatio, setStorePointsToDiscountRatio] = useState("10");
   const [storePointsEarnRatio, setStorePointsEarnRatio] = useState("20");
+  const [storeMinPurchaseForPointsRedeem, setStoreMinPurchaseForPointsRedeem] = useState("0");
   const [storeBillPaymentFee, setStoreBillPaymentFee] = useState("10");
   const [storeRoundingMode, setStoreRoundingMode] = useState<"none" | "floor" | "ceil" | "round" | "round_025">("none");
   const [storeEnableBillPayment, setStoreEnableBillPayment] = useState(true);
@@ -1590,6 +1593,7 @@ export default function App() {
       setStoreAllowNegativeStock(storeSettingsData.allowNegativeStock || false);
       setStorePointsToDiscountRatio(storeSettingsData.pointsToDiscountRatio || "10");
       setStorePointsEarnRatio(storeSettingsData.pointsEarnRatio || "20");
+      setStoreMinPurchaseForPointsRedeem(storeSettingsData.minPurchaseForPointsRedeem || "0");
       setStoreBillPaymentFee(storeSettingsData.billPaymentFee || "10");
       setStoreRoundingMode(storeSettingsData.roundingMode || "none");
       setStoreEnableBillPayment(storeSettingsData.enableBillPayment !== false);
@@ -1691,7 +1695,10 @@ export default function App() {
         case "F7":
           e.preventDefault();
           if (selectedMember && parseFloat(storePointsToDiscountRatio) > 0) {
-            if (selectedMember.points > 0) {
+            const minPurchase = parseFloat(storeMinPurchaseForPointsRedeem || "0");
+            if (cartSubtotal < minPurchase) {
+              showToast(`ต้องมียอดซื้อขั้นต่ำ ${minPurchase} บาท เพื่อใช้แต้มสะสม`, "warning");
+            } else if (selectedMember.points > 0) {
               setRedeemPointsInput(pointsRedeemed > 0 ? pointsRedeemed.toString() : "");
               setIsRedeemPointsModalOpen(true);
             } else {
@@ -4309,6 +4316,7 @@ export default function App() {
           allowNegativeStock: storeAllowNegativeStock,
           pointsToDiscountRatio: storePointsToDiscountRatio,
           pointsEarnRatio: storePointsEarnRatio,
+          minPurchaseForPointsRedeem: storeMinPurchaseForPointsRedeem,
           billPaymentFee: storeBillPaymentFee,
           roundingMode: storeRoundingMode,
           enableBillPayment: storeEnableBillPayment,
@@ -5157,6 +5165,21 @@ export default function App() {
       ? (completedOrderReceipt.paymentMethod === 'split' ? parseFloat(completedOrderReceipt.splitWelfareAmount || "0") : null)
       : (cart.length > 0 ? (paymentMethod === 'split' ? parseFloat(splitWelfare || "0") : null) : (lastCompletedDisplayOrderRef.current?.paymentMethod === 'split' ? parseFloat(lastCompletedDisplayOrderRef.current.splitWelfareAmount || "0") : null));
 
+    const currentMemberForDisplay = completedOrderReceipt 
+      ? membersList.find(m => m.id === completedOrderReceipt.memberId)
+      : (selectedMember || (lastCompletedDisplayOrderRef.current ? membersList.find(m => m.id === lastCompletedDisplayOrderRef.current.memberId) : null));
+
+    const finalPointsEarned = completedOrderReceipt 
+      ? (completedOrderReceipt.pointsEarned || 0)
+      : 0;
+
+    const payloadMemberInfo = currentMemberForDisplay ? {
+      name: currentMemberForDisplay.name,
+      phone: currentMemberForDisplay.phone,
+      points: currentMemberForDisplay.points,
+      earnedPoints: finalPointsEarned
+    } : null;
+
     const payload = {
       terminalId,
       cart: syncCart,
@@ -5171,6 +5194,7 @@ export default function App() {
       splitCashAmount: finalSplitCash,
       splitTransferAmount: finalSplitTransfer,
       splitWelfareAmount: finalSplitWelfare,
+      memberInfo: payloadMemberInfo,
       promptpayEnabled: storePromptpayEnabled,
       promptpayNumber: storePromptpayNumber,
       promptpayName: storePromptpayName,
@@ -5199,7 +5223,9 @@ export default function App() {
     storePromptpayEnabled,
     storePromptpayNumber,
     storePromptpayName,
-    storePromptpayQrUrl
+    storePromptpayQrUrl,
+    selectedMember,
+    membersList
   ]);
 
   // History Filter List Calculation
@@ -6157,15 +6183,27 @@ export default function App() {
                       </p>
                     </div>
 
-                    <div className="bg-emerald-50 border border-emerald-200/60 rounded-2xl p-4 flex items-center gap-4 mt-5">
-                      <div className="bg-emerald-100 text-emerald-700 p-2.5 rounded-xl border border-emerald-200/30">
-                        <Sparkles className="w-6 h-6 animate-pulse" />
+                    {customerDisplayData.memberInfo ? (
+                      <div className="bg-indigo-50 border border-indigo-200/60 rounded-2xl p-4 flex items-center gap-4 mt-5 animate-fadeIn">
+                         <div className="bg-indigo-100 text-indigo-700 p-2.5 rounded-xl border border-indigo-200/30">
+                           <Users className="w-6 h-6 animate-pulse" />
+                         </div>
+                         <div>
+                           <h3 className="font-bold text-indigo-900 text-sm">ยินดีต้อนรับคุณ {customerDisplayData.memberInfo.name}</h3>
+                           <p className="text-[10px] text-indigo-700 mt-0.5">แต้มสะสมปัจจุบันของคุณคือ {customerDisplayData.memberInfo.points.toLocaleString()} แต้ม</p>
+                         </div>
                       </div>
-                      <div>
-                        <h3 className="font-bold text-emerald-900 text-sm">เคาน์เตอร์พร้อมให้บริการแล้ว</h3>
-                        <p className="text-[10px] text-emerald-700 mt-0.5">โปรดนำสินค้าที่มีบาร์โค้ดมายังเคาน์เตอร์แคชเชียร์เพื่อแสกน</p>
+                    ) : (
+                      <div className="bg-emerald-50 border border-emerald-200/60 rounded-2xl p-4 flex items-center gap-4 mt-5">
+                        <div className="bg-emerald-100 text-emerald-700 p-2.5 rounded-xl border border-emerald-200/30">
+                          <Sparkles className="w-6 h-6 animate-pulse" />
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-emerald-900 text-sm">เคาน์เตอร์พร้อมให้บริการแล้ว</h3>
+                          <p className="text-[10px] text-emerald-700 mt-0.5">โปรดนำสินค้าที่มีบาร์โค้ดมายังเคาน์เตอร์แคชเชียร์เพื่อแสกน</p>
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </div>
 
                   {/* Promotions Card */}
@@ -6232,15 +6270,27 @@ export default function App() {
                     </p>
                   </div>
 
-                  <div className="bg-emerald-50 border border-emerald-200/60 rounded-2xl p-5 flex items-center gap-4 mt-6">
-                    <div className="bg-emerald-100 text-emerald-700 p-3 rounded-xl border border-emerald-200/30">
-                      <Sparkles className="w-6 h-6 animate-pulse text-emerald-600" />
+                  {customerDisplayData.memberInfo ? (
+                    <div className="bg-indigo-50 border border-indigo-200/60 rounded-2xl p-5 flex items-center gap-4 mt-6 animate-fadeIn">
+                      <div className="bg-indigo-100 text-indigo-700 p-3 rounded-xl border border-indigo-200/30">
+                        <Users className="w-6 h-6 animate-pulse text-indigo-600" />
+                      </div>
+                      <div>
+                        <h3 className="font-extrabold text-indigo-900 text-base">ยินดีต้อนรับคุณ {customerDisplayData.memberInfo.name}</h3>
+                        <p className="text-xs text-indigo-700 mt-0.5">แต้มสะสมปัจจุบันของคุณคือ {customerDisplayData.memberInfo.points.toLocaleString()} แต้ม</p>
+                      </div>
                     </div>
-                    <div>
-                      <h3 className="font-extrabold text-emerald-900 text-base">เคาน์เตอร์พร้อมให้บริการแล้ว</h3>
-                      <p className="text-xs text-emerald-700 mt-0.5">โปรดนำสินค้าที่มีบาร์โค้ดมายังเคาน์เตอร์แคชเชียร์เพื่อทำรายการสแกนสินค้า</p>
+                  ) : (
+                    <div className="bg-emerald-50 border border-emerald-200/60 rounded-2xl p-5 flex items-center gap-4 mt-6">
+                      <div className="bg-emerald-100 text-emerald-700 p-3 rounded-xl border border-emerald-200/30">
+                        <Sparkles className="w-6 h-6 animate-pulse text-emerald-600" />
+                      </div>
+                      <div>
+                        <h3 className="font-extrabold text-emerald-900 text-base">เคาน์เตอร์พร้อมให้บริการแล้ว</h3>
+                        <p className="text-xs text-emerald-700 mt-0.5">โปรดนำสินค้าที่มีบาร์โค้ดมายังเคาน์เตอร์แคชเชียร์เพื่อทำรายการสแกนสินค้า</p>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
 
                 {/* Promotions Card (full height, beautifully matching) */}
@@ -6405,6 +6455,27 @@ export default function App() {
                     )}
                   </div>
                 </div>
+
+                {customerDisplayData.memberInfo && (
+                  <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-4 flex flex-col justify-center shadow-sm shrink-0 md:-mt-4 relative overflow-hidden">
+                    <div className="absolute top-[-30%] right-[-10%] w-32 h-32 bg-indigo-500/10 rounded-full blur-xl pointer-events-none"></div>
+                    <div className="flex justify-between items-center border-b border-indigo-200/60 pb-2 mb-2">
+                      <span className="font-bold text-indigo-800 flex items-center gap-1.5 text-sm">
+                        <Users className="w-5 h-5 text-indigo-600" />
+                        สมาชิกลูกค้า (Member)
+                      </span>
+                      <span className="font-bold text-indigo-950 text-sm">{customerDisplayData.memberInfo.name}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-indigo-600">เบอร์โทร:</span>
+                      <span className="font-mono font-semibold text-slate-700">{customerDisplayData.memberInfo.phone}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-xs mt-1.5">
+                      <span className="text-indigo-600">แต้มสะสมปัจจุบัน:</span>
+                      <span className="font-mono font-black text-indigo-700 text-sm">{customerDisplayData.memberInfo.points.toLocaleString()} <span className="text-[10px] font-sans font-normal">แต้ม</span></span>
+                    </div>
+                  </div>
+                )}
 
                 {/* PromptPay QR Code - separate card but with extremely tight negative margin to bring it very close to the total due card (เอากรอบขึ้นมาใกล้กรอบ รวมเงิน) */}
                 {customerDisplayData.promptpayEnabled && 
@@ -6577,6 +6648,28 @@ export default function App() {
                   </p>
                 </div>
               </div>
+
+              {customerDisplayData.memberInfo && (
+                <div className="w-full max-w-md mt-4 bg-indigo-50 border border-indigo-100 rounded-2xl p-4 text-left text-xs text-indigo-900 space-y-2">
+                  <div className="flex justify-between items-center border-b border-indigo-200/60 pb-2">
+                    <span className="font-bold flex items-center gap-1.5">
+                      <Users className="w-4 h-4 text-indigo-600" />
+                      สมาชิกลูกค้า
+                    </span>
+                    <span className="font-bold text-indigo-700">{customerDisplayData.memberInfo.name} ({customerDisplayData.memberInfo.phone})</span>
+                  </div>
+                  <div className="flex justify-between items-center pt-1">
+                    <span className="text-indigo-600">แต้มสะสมทั้งหมด:</span>
+                    <span className="font-mono font-bold text-sm">{customerDisplayData.memberInfo.points.toLocaleString()} แต้ม</span>
+                  </div>
+                  {customerDisplayData.memberInfo.earnedPoints > 0 && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-emerald-600 font-bold">ได้รับแต้มจากบิลนี้:</span>
+                      <span className="font-mono font-bold text-sm text-emerald-600">+{customerDisplayData.memberInfo.earnedPoints.toLocaleString()} แต้ม</span>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Payment Details block */}
               <div className="w-full max-w-md mt-4 bg-slate-50 border border-slate-150 rounded-2xl p-4 text-left text-xs text-slate-600 space-y-2.5">
@@ -7466,7 +7559,7 @@ export default function App() {
                     <div className="bg-emerald-50 flex flex-col gap-2 text-emerald-900 p-2.5 rounded-xl text-[10px] font-bold border border-emerald-200/50 mt-1 animate-fadeIn">
                       <div className="flex justify-between items-center">
                         <span>🎁 แต้มสะสมเดิม: {selectedMember.points || 0} แต้ม</span>
-                        <span className="text-emerald-700 font-black">บิลนี้เพิ่ม: +{parseFloat(storePointsEarnRatio) > 0 ? Math.floor(cartTotalAmount / parseFloat(storePointsEarnRatio)) : 0} แต้ม</span>
+                        <span className="text-emerald-700 font-black">บิลนี้เพิ่ม: +{parseFloat(storePointsEarnRatio) > 0 ? (cartTotalAmount / parseFloat(storePointsEarnRatio)).toFixed(2) : 0} แต้ม</span>
                       </div>
                       
                       {parseFloat(storePointsToDiscountRatio) > 0 && selectedMember.points > 0 && (() => {
@@ -11863,6 +11956,11 @@ export default function App() {
                                   <div>
                                     <div className="font-bold text-slate-800">{o.billNumber}</div>
                                     <div className="text-[10px] text-slate-500 mt-0.5">{new Date(o.createdAt).toLocaleString()}</div>
+                                    {o.items && o.items.length > 0 && (
+                                      <div className="text-[9px] text-slate-400 mt-1 line-clamp-1 max-w-[180px]">
+                                        {o.items.map((it: any) => it.unitName + ' x' + it.quantity).join(', ')}
+                                      </div>
+                                    )}
                                   </div>
                                   <div className="font-black font-mono text-indigo-700">฿{parseFloat(o.totalAmount).toFixed(2)}</div>
                                 </button>
@@ -13136,6 +13234,18 @@ export default function App() {
                           value={storePointsEarnRatio}
                           onChange={(e) => setStorePointsEarnRatio(e.target.value)}
                           placeholder="เช่น 20 (ซื้อ 20 บาท ได้ 1 แต้ม)"
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1 text-xs">
+                        <label className="font-bold text-slate-700 flex items-center gap-1">
+                          ยอดซื้อขั้นต่ำในการใช้แต้ม (บาท)
+                        </label>
+                        <input
+                          type="number"
+                          className="bg-white border border-slate-200 rounded-xl py-2 px-3 text-slate-800 font-sans focus:outline-none"
+                          value={storeMinPurchaseForPointsRedeem}
+                          onChange={(e) => setStoreMinPurchaseForPointsRedeem(e.target.value)}
+                          placeholder="เช่น 100"
                         />
                       </div>
                       <div className="flex flex-col gap-1 text-xs">
@@ -17849,7 +17959,7 @@ export default function App() {
             
             <div className="bg-emerald-50 rounded-2xl p-4 text-center">
               <p className="text-sm text-emerald-800 font-semibold mb-1">แต้มสะสมที่ใช้ได้ทั้งหมด</p>
-              <p className="text-3xl font-black text-emerald-600">{selectedMember.points}</p>
+              <p className="text-3xl font-black text-emerald-600">{parseFloat(selectedMember.points || 0).toFixed(2)}</p>
               <p className="text-xs text-emerald-700/70 mt-1">อัตราแลกเปลี่ยน: {storePointsToDiscountRatio} แต้ม = 1 บาท</p>
             </div>
 
@@ -17862,7 +17972,7 @@ export default function App() {
                   ref={redeemPointsInputRef}
                   type="number"
                   min="0"
-                  max={selectedMember.points}
+                  max={parseFloat(selectedMember.points || 0)}
                   step={parseFloat(storePointsToDiscountRatio)}
                   className="flex-1 bg-white border-2 border-slate-200 rounded-xl py-3 px-4 text-center text-xl font-bold text-slate-800 focus:outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all"
                   placeholder="0"
@@ -17875,7 +17985,8 @@ export default function App() {
                       let num = parseInt(val, 10);
                       if (isNaN(num)) num = 0;
                       if (num < 0) num = 0;
-                      if (num > selectedMember.points) num = selectedMember.points;
+                      const maxPts = parseFloat(selectedMember.points || 0);
+                      if (num > maxPts) num = Math.floor(maxPts);
                       setRedeemPointsInput(num.toString());
                     }
                   }}
@@ -17895,17 +18006,17 @@ export default function App() {
               <input
                 type="range"
                 min="0"
-                max={selectedMember.points}
+                max={parseFloat(selectedMember.points || 0)}
                 step={parseFloat(storePointsToDiscountRatio)}
                 value={parseInt(redeemPointsInput || "0", 10)}
                 onChange={(e) => {
-                  setRedeemPointsInput(e.target.value);
+                  setRedeemPointsInput(parseInt(e.target.value, 10).toString());
                 }}
                 className="w-full accent-emerald-600"
               />
               <div className="flex justify-between text-xs text-slate-400 font-mono mt-1 px-1">
                 <span>0</span>
-                <span>{selectedMember.points}</span>
+                <span>{parseFloat(selectedMember.points || 0).toFixed(2)}</span>
               </div>
             </div>
 

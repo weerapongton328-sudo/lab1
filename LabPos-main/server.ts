@@ -1123,17 +1123,19 @@ app.post("/api/orders", async (req, res) => {
       let ptsEarned = 0;
       const ptsRedeemed = pointsRedeemed ? parseInt(pointsRedeemed) : 0;
       if (activeMember) {
-        if (ptsRedeemed > activeMember.points) {
-          throw new Error(`คะแนนสมาชิกสะสมไม่พอ! มีอยู่ ${activeMember.points} คะแนน ต้องการแลก ${ptsRedeemed} คะแนน`);
+        const currentPoints = parseFloat(activeMember.points?.toString() || "0");
+        if (ptsRedeemed > currentPoints) {
+          throw new Error(`คะแนนสมาชิกสะสมไม่พอ! มีอยู่ ${currentPoints.toFixed(2)} คะแนน ต้องการแลก ${ptsRedeemed} คะแนน`);
         }
         
         // Calculate points earned from ratio
         const earnRatio = parseFloat(settingsList[0]?.pointsEarnRatio || "20");
-        if (earnRatio > 0) {
-          ptsEarned = Math.floor(invoiceTotal / earnRatio);
+        // ลูกค้าที่ซื้อเป็นเชื่อ (credit) จะยังไม่ได้แต้ม
+        if (earnRatio > 0 && paymentMethod !== "credit") {
+          ptsEarned = parseFloat((invoiceTotal / earnRatio).toFixed(2));
         }
         
-        const finalPtsBalance = activeMember.points - ptsRedeemed + ptsEarned;
+        const finalPtsBalance = currentPoints - ptsRedeemed + ptsEarned;
         
         // Also if it's not credit, update points, else we already updated above, wait, if credit we also need to update points
         // It's safe to update members again here, but let's just do it in one go if possible, or two updates are fine since it's a transaction
@@ -2913,6 +2915,7 @@ app.post("/api/customer-display/update", (req, res) => {
       splitCashAmount: null,
       splitTransferAmount: null,
       splitWelfareAmount: null,
+      memberInfo: null,
       adUrl: "",
       adType: "folder",
       adEnabled: true,
@@ -2959,6 +2962,7 @@ app.get("/api/customer-display/state", (req, res) => {
       splitCashAmount: null,
       splitTransferAmount: null,
       splitWelfareAmount: null,
+      memberInfo: null,
       adUrl: "",
       adType: "folder",
       adEnabled: true,
@@ -3680,10 +3684,22 @@ app.post("/api/debtors/:id/pay", async (req, res) => {
       const balance = parseFloat(debRec.currentBalance);
       const newBalance = Math.max(0, balance - payAmt);
 
+      // คำนวณแต้มเมื่อรับชำระบิลเชื่อ
+      const settingsList = await tx.select().from(storeSettings).limit(1);
+      const earnRatio = parseFloat(settingsList[0]?.pointsEarnRatio || "20");
+      let ptsEarned = 0;
+      if (earnRatio > 0) {
+        ptsEarned = parseFloat((payAmt / earnRatio).toFixed(2));
+      }
+      
+      const currentPts = parseFloat(debRec.points?.toString() || "0");
+      const newPts = currentPts + ptsEarned;
+
       await tx
         .update(members)
         .set({
           currentBalance: newBalance.toFixed(2),
+          points: newPts,
           updatedAt: new Date(),
         })
         .where(eq(members.id, debtorId));
@@ -3728,11 +3744,26 @@ app.get("/api/debtors/:id/history", async (req, res) => {
       .where(eq(debtorPayments.memberId, debtorId))
       .orderBy(desc(debtorPayments.createdAt));
 
-    const creditOrders = await db
-      .select()
+    const creditOrdersRaw = await db
+      .select({
+        order: orders,
+        cashierName: users.name
+      })
       .from(orders)
+      .leftJoin(users, eq(orders.cashierId, users.id))
       .where(and(eq(orders.memberId, debtorId), eq(orders.paymentMethod, "credit")))
       .orderBy(desc(orders.createdAt));
+
+    const creditOrders = await Promise.all(
+      creditOrdersRaw.map(async (row) => {
+        const items = await db.select().from(orderItems).where(eq(orderItems.orderId, row.order.id));
+        return { 
+          ...row.order, 
+          cashierName: row.cashierName || 'พนักงานทั่วไป',
+          items 
+        };
+      })
+    );
 
     res.json({ payments: pays, orders: creditOrders });
   } catch (err: any) {

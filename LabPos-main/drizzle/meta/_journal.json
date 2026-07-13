@@ -15,6 +15,20 @@
       "when": 1783958695693,
       "tag": "0001_supreme_wendell_rand",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1783964109217,
+      "tag": "0002_woozy_tarot",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1783964193326,
+      "tag": "0003_quick_gabe_jones",
+      "breakpoints": true
     }
   ]
 }
