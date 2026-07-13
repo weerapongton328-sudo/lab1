@@ -1,0 +1,6 @@
+{
+  "name": "POS OK",
+  "description": "ระบบบริหารจัดการร้านค้ามินิมาร์ท ปลีก-ส่ง พร้อมคลังสินค้าหลายหน่วยนับและระบบรักษาความปลอดภัยจำกัดสิทธิ์",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

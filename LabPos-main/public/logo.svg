@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 100" width="100%" height="100%">
+  <rect width="300" height="100" rx="20" fill="#047857" />
+  <text x="150" y="65" font-family="Kanit, sans-serif" font-size="50" font-weight="900" fill="#ffffff" text-anchor="middle" dominant-baseline="middle" letter-spacing="2">POS OK</text>
+  <circle cx="260" cy="50" r="15" fill="#facc15" />
+  <path d="M255 50 L260 55 L268 45" stroke="#047857" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round" />
+</svg>

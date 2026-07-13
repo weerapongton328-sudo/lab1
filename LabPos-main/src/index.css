@@ -1,0 +1,276 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&family=Kanit:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", "IBM Plex Sans Thai", "Kanit", "Sarabun", ui-sans-serif, system-ui, sans-serif;
+}
+
+body {
+  font-family: "Inter", "IBM Plex Sans Thai", "Kanit", "Sarabun", ui-sans-serif, system-ui, sans-serif;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+@media print {
+  @page {
+    size: auto;
+    margin: 0mm; /* This removes the default browser header, footer, and URL */
+  }
+
+  /* Hide all elements on the body by default to prevent heavy layout computation during print preview */
+  body * {
+    visibility: hidden !important;
+  }
+
+  /* Make ONLY our print layouts and their children visible to ensure instant Chrome rendering */
+  #thermal-print-layout, #thermal-print-layout *,
+  #thermal-print-layout-bill, #thermal-print-layout-bill *,
+  #a4-print-layout, #a4-print-layout *,
+  #label-print-layout, #label-print-layout * {
+    visibility: visible !important;
+  }
+
+  /* Reset body, html, and root to allow natural document flow and prevent clipping / blank pages */
+  body, html, #root {
+    background: white !important;
+    color: black !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    height: auto !important;
+    width: auto !important;
+    position: static !important;
+  }
+
+  /* Ensure the workspace root container doesn't force fullscreen or hide overflow during printing */
+  #workspace-root {
+    display: block !important;
+    height: auto !important;
+    width: auto !important;
+    overflow: visible !important;
+    position: static !important;
+    background: white !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  /* Hide all main screen UI elements inside workspace root */
+  #workspace-root > :not(#thermal-print-layout):not(#thermal-print-layout-bill):not(#a4-print-layout):not(#label-print-layout) {
+    display: none !important;
+  }
+
+  /* Hide any modals or absolute overlays that might render inside workspace-root or portal */
+  .fixed, .backdrop-blur-sm, #hold-bills-shortcut-list-modal, #bill-receipt-mockup-modal, #receipt-mockup-modal, #split-payment-modal {
+    display: none !important;
+  }
+  
+  /* Thermal Print Layout (80mm) */
+  body[data-print-size="thermal"] #thermal-print-layout,
+  body[data-print-size="thermal"] #thermal-print-layout-bill {
+    display: block !important;
+    width: 80mm;
+    margin: 0;
+    background: white !important;
+    color: black !important;
+    box-shadow: none !important;
+  }
+
+  /* Override styles for 58mm printer paper width */
+  body[data-paper-width="58mm"][data-print-size="thermal"] #thermal-print-layout,
+  body[data-paper-width="58mm"][data-print-size="thermal"] #thermal-print-layout-bill,
+  body[data-paper-width="58mm"]:not([data-print-size]) #thermal-print-layout,
+  body[data-paper-width="58mm"]:not([data-print-size]) #thermal-print-layout-bill {
+    width: 58mm !important;
+  }
+  body[data-print-size="thermal"] #a4-print-layout,
+  body[data-print-size="thermal"] #label-print-layout {
+    display: none !important;
+  }
+
+  /* A4 Print Layout */
+  body[data-print-size="a4"] #thermal-print-layout,
+  body[data-print-size="a4"] #thermal-print-layout-bill,
+  body[data-print-size="a4"] #label-print-layout {
+    display: none !important;
+  }
+  body[data-print-size="a4"] #a4-print-layout {
+    display: block !important;
+    width: 210mm;
+    min-height: 297mm;
+    margin: 0 auto;
+    padding: 15mm;
+    background: white !important;
+    color: black !important;
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 13px;
+    box-shadow: none !important;
+  }
+
+  /* Label Print Layout */
+  body[data-print-size="label"] #thermal-print-layout,
+  body[data-print-size="label"] #thermal-print-layout-bill,
+  body[data-print-size="label"] #a4-print-layout {
+    display: none !important;
+  }
+  body[data-print-size="label"] #label-print-layout {
+    display: block !important;
+    background: white !important;
+    color: black !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  body[data-print-size="label"] .label-page {
+    page-break-after: always !important;
+    break-after: page !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    overflow: hidden !important;
+  }
+
+  /* Label A4 Sheet Print Layout */
+  body[data-print-size="label-a4"] #thermal-print-layout,
+  body[data-print-size="label-a4"] #thermal-print-layout-bill,
+  body[data-print-size="label-a4"] #a4-print-layout {
+    display: none !important;
+  }
+  body[data-print-size="label-a4"] #label-print-layout {
+    display: block !important;
+    background: white !important;
+    color: black !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 210mm !important;
+  }
+  body[data-print-size="label-a4"] .a4-label-sheet {
+    page-break-after: always !important;
+    break-after: page !important;
+    width: 210mm !important;
+    height: 297mm !important;
+    position: relative !important;
+    box-sizing: border-box !important;
+    background: white !important;
+    overflow: hidden !important;
+  }
+
+  /* Fallback: if data-print-size is not specified, default to thermal for backward compatibility */
+  body:not([data-print-size]) #thermal-print-layout,
+  body:not([data-print-size]) #thermal-print-layout-bill {
+    display: block !important;
+    width: 80mm;
+    margin: 0;
+    background: white !important;
+    color: black !important;
+    box-shadow: none !important;
+  }
+  body:not([data-print-size]) #a4-print-layout,
+  body:not([data-print-size]) #label-print-layout {
+    display: none !important;
+  }
+}
+
+@media screen {
+  #thermal-print-layout, #thermal-print-layout-bill, #a4-print-layout, #label-print-layout {
+    display: none !important;
+  }
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Custom legibility and high-contrast tweaks for POS front screen */
+@media screen {
+  /* Elevate font rendering, contrast, and blackness of texts inside POS */
+  #pos-view-container {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  /* Make all default text colors in POS darker for high contrast */
+  #pos-view-container .text-slate-700 {
+    color: #1e293b !important; /* slate-800 */
+    font-weight: 500 !important;
+  }
+  
+  #pos-view-container .text-slate-600 {
+    color: #0f172a !important; /* slate-900 */
+    font-weight: 500 !important;
+  }
+
+  #pos-view-container .text-slate-500 {
+    color: #1e293b !important; /* slate-800 */
+    font-weight: 500 !important;
+  }
+
+  #pos-view-container .text-slate-400 {
+    color: #334155 !important; /* slate-700 */
+  }
+
+  /* Make product names in cart and search results stand out extremely clearly */
+  #pos-view-container .font-bold.text-slate-900 {
+    color: #000000 !important;
+    font-weight: 700 !important;
+    font-size: 1.05em !important;
+  }
+
+  /* Force critical numbers like totals, prices, quantities to be extra black and sharp */
+  #pos-view-container .font-mono {
+    font-weight: 700 !important;
+    letter-spacing: -0.01em;
+  }
+  
+  /* Ensure mono numbers inside tables have solid dark color */
+  #pos-view-container table .font-mono {
+    color: #000000 !important;
+  }
+  
+  /* Except some specific badge elements that should be colored */
+  #pos-view-container .text-emerald-700.font-mono,
+  #pos-view-container .text-emerald-500.font-mono,
+  #pos-view-container .text-emerald-600.font-mono {
+    color: #047857 !important; /* emerald-700 */
+  }
+  
+  #pos-view-container .text-rose-600.font-mono,
+  #pos-view-container .text-red-500.font-mono,
+  #pos-view-container .text-rose-700.font-mono {
+    color: #be123c !important; /* rose-700 */
+  }
+
+  /* Make input placeholder text more visible but still distinctive */
+  #pos-view-container input::placeholder {
+    color: #64748b !important; /* slate-500 instead of slate-400 */
+    font-weight: 500;
+  }
+
+  /* Enhance borders to make cards and grids more distinct */
+  #pos-view-container .border-slate-200 {
+    border-color: #cbd5e1 !important; /* slate-300 */
+  }
+
+  #pos-view-container .border-slate-100 {
+    border-color: #cbd5e1 !important; /* slate-300 */
+  }
+
+  /* Make buttons text look incredibly sharp and clear */
+  #pos-view-container button {
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.05);
+    letter-spacing: -0.01em;
+  }
+  
+  /* Make product list badges and unit selection badges extremely clear */
+  #pos-view-container .bg-slate-100 {
+    background-color: #f8fafc !important; /* slate-50 */
+    border: 1px solid #cbd5e1 !important; /* slate-300 */
+    color: #0f172a !important; /* slate-900 */
+  }
+}
