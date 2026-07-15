@@ -591,6 +591,118 @@ const getLocalDateString = (dateInput: Date | string) => {
   return `${year}-${month}-${day}`;
 };
 
+
+const SearchableSelect = ({ 
+  options, 
+  value, 
+  onChange, 
+  placeholder, 
+  className 
+}: { 
+  options: { label: string; value: string; searchText?: string }[], 
+  value: string, 
+  onChange: (val: string) => void, 
+  placeholder?: string, 
+  className?: string 
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!isOpen) {
+      const selected = options.find(o => o.value === value);
+      setSearchTerm(selected ? selected.label : "");
+    }
+  }, [value, isOpen, options]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const filteredOptions = useMemo(() => {
+    if (!searchTerm) return options;
+    const term = searchTerm.toLowerCase();
+    return options.filter(o => 
+      o.label.toLowerCase().includes(term) || 
+      (o.searchText && o.searchText.toLowerCase().includes(term))
+    );
+  }, [options, searchTerm]);
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      // If there's an exact match for a barcode or label, pick it
+      const term = searchTerm.toLowerCase();
+      const exactMatch = filteredOptions.find(o => 
+        (o.searchText && o.searchText.toLowerCase().split(" ").includes(term)) ||
+        o.label.toLowerCase() === term
+      ) || (filteredOptions.length === 1 ? filteredOptions[0] : null);
+      
+      if (exactMatch) {
+        onChange(exactMatch.value);
+        setSearchTerm(exactMatch.label);
+        setIsOpen(false);
+        inputRef.current?.blur();
+      }
+    } else if (e.key === "Escape") {
+      setIsOpen(false);
+      inputRef.current?.blur();
+    }
+  };
+
+  return (
+    <div className="relative w-full" ref={wrapperRef}>
+      <input
+        ref={inputRef}
+        type="text"
+        className={className}
+        placeholder={placeholder}
+        value={isOpen ? searchTerm : (options.find(o => o.value === value)?.label || "")}
+        onChange={(e) => {
+          setSearchTerm(e.target.value);
+          setIsOpen(true);
+        }}
+        onFocus={(e) => {
+          setSearchTerm("");
+          setIsOpen(true);
+          e.target.select();
+        }}
+        onKeyDown={handleKeyDown}
+      />
+      {isOpen && (
+        <ul className="absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-60 overflow-y-auto">
+          {filteredOptions.length > 0 ? (
+            filteredOptions.map(option => (
+              <li
+                key={option.value}
+                className="px-3 py-2 hover:bg-emerald-50 cursor-pointer text-slate-800 text-sm border-b border-slate-50 last:border-0"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  onChange(option.value);
+                  setSearchTerm(option.label);
+                  setIsOpen(false);
+                }}
+              >
+                {option.label}
+              </li>
+            ))
+          ) : (
+            <li className="px-3 py-2 text-slate-500 text-sm text-center">ไม่พบข้อมูล</li>
+          )}
+        </ul>
+      )}
+    </div>
+  );
+};
+
 export default function App() {
   // Screen Resolution states and layout auto-scaling
   const [screenResolution, setScreenResolution] = useState<"auto" | "1366x768" | "1280x720" | "1600x900" | "1920x1080">(() => {
@@ -1230,6 +1342,7 @@ export default function App() {
   const [storeBillPaymentFee, setStoreBillPaymentFee] = useState("10");
   const [storeRoundingMode, setStoreRoundingMode] = useState<"none" | "floor" | "ceil" | "round" | "round_025">("none");
   const [storeEnableBillPayment, setStoreEnableBillPayment] = useState(true);
+  const [storeEnablePointSystem, setStoreEnablePointSystem] = useState(true);
   const [storeBillRoundingMode, setStoreBillRoundingMode] = useState<"none" | "floor" | "ceil" | "round" | "round_025">("none");
   const [storePromptpayEnabled, setStorePromptpayEnabled] = useState(false);
   const [storePromptpayNumber, setStorePromptpayNumber] = useState("");
@@ -1597,6 +1710,7 @@ export default function App() {
       setStoreBillPaymentFee(storeSettingsData.billPaymentFee || "10");
       setStoreRoundingMode(storeSettingsData.roundingMode || "none");
       setStoreEnableBillPayment(storeSettingsData.enableBillPayment !== false);
+      setStoreEnablePointSystem(storeSettingsData.enablePointSystem !== false);
       setStoreBillRoundingMode(storeSettingsData.billRoundingMode || "none");
       setStorePromptpayEnabled(storeSettingsData.promptpayEnabled || false);
       setStorePromptpayNumber(storeSettingsData.promptpayNumber || "");
@@ -1928,7 +2042,7 @@ export default function App() {
   const triggerAutoPrint = () => {
     setTimeout(() => {
       window.print();
-    }, 15); // หน่วงเวลา 15ms ให้ DOM Render ใบเสร็จ
+    }, 0); // หน่วงเวลา 0ms ให้ DOM Render ใบเสร็จ
   };
 
   // Generate ESC/POS Bytes for Orders
@@ -4319,6 +4433,7 @@ export default function App() {
           minPurchaseForPointsRedeem: storeMinPurchaseForPointsRedeem,
           billPaymentFee: storeBillPaymentFee,
           roundingMode: storeRoundingMode,
+          enablePointSystem: storeEnablePointSystem,
           enableBillPayment: storeEnableBillPayment,
           billRoundingMode: storeBillRoundingMode,
           promptpayEnabled: storePromptpayEnabled,
@@ -11148,22 +11263,20 @@ export default function App() {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="flex flex-col gap-1.5">
                           <label className="text-xs font-bold text-slate-600">เลือกสินค้าเพื่อปรับยอด *</label>
-                          <select
-                            required
+                          <SearchableSelect
+                            className="bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-3 text-slate-800 text-sm focus:outline-none focus:ring-1 focus:ring-slate-400 focus:bg-white"
+                            placeholder="-- เลือกสินค้า (ค้นหาชื่อหรือบาร์โค้ด) --"
                             value={stockAdjustProductId}
-                            onChange={(e) => {
-                              setStockAdjustProductId(e.target.value);
+                            onChange={(val) => {
+                              setStockAdjustProductId(val);
                               setStockAdjustProductUnitId("");
                             }}
-                            className="bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-3 text-slate-800 text-sm focus:outline-none focus:ring-1 focus:ring-slate-400 focus:bg-white"
-                          >
-                            <option value="">-- เลือกสินค้า --</option>
-                            {productsList.map((p) => (
-                              <option key={p.id} value={p.id}>
-                                {p.name} (คงเหลือปัจจุบันในระบบ: {p.stockQuantity} {p.baseUnit})
-                              </option>
-                            ))}
-                          </select>
+                            options={productsList.map(p => ({
+                              value: p.id.toString(),
+                              label: `${p.name} (คงเหลือ: ${p.stockQuantity} ${p.baseUnit})`,
+                              searchText: p.units?.map(u => u.barcode).join(" ") || ""
+                            }))}
+                          />
                         </div>
 
                         <div className="flex flex-col gap-1.5">
@@ -13223,7 +13336,20 @@ export default function App() {
                       )}
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50 border border-slate-200 rounded-xl p-3.5 mt-1">
+                    <div className="flex flex-col gap-1 text-xs mt-2 border-t border-slate-100 pt-3">
+                      <label className="font-bold text-slate-700 flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={storeEnablePointSystem}
+                          onChange={(e) => setStoreEnablePointSystem(e.target.checked)}
+                          className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 border-slate-300"
+                        />
+                        เปิดใช้งานระบบสะสมแต้ม (Point System)
+                      </label>
+                    </div>
+                    
+                    {storeEnablePointSystem && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50 border border-slate-200 rounded-xl p-3.5 mt-1">
                       <div className="flex flex-col gap-1 text-xs">
                         <label className="font-bold text-slate-700 flex items-center gap-1">
                           อัตราการได้รับคะแนนสะสม (ยอดซื้อ : 1 คะแนน)
@@ -13278,7 +13404,9 @@ export default function App() {
                         </select>
                       </div>
 
-                      <div className="flex flex-col gap-1 text-xs mt-2 border-t border-slate-100 pt-3">
+                    </div>
+                    )}
+                    <div className="flex flex-col gap-1 text-xs mt-2 border-t border-slate-100 pt-3">
                         <label className="font-bold text-slate-700 flex items-center gap-2">
                           <input
                             type="checkbox"
@@ -13368,7 +13496,6 @@ export default function App() {
                           </button>
                         </div>
                       </div>
-                    </div>
 
                     <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 mt-1 flex flex-col gap-3">
                       <h4 className="font-bold text-slate-700 flex items-center gap-1.5 text-sm">
@@ -14054,34 +14181,24 @@ export default function App() {
                               {promoFormApplyTo === "custom_set" ? (
                                 <div className="border border-slate-200 rounded-xl p-3 bg-slate-50 flex flex-col gap-3">
                                   <div className="flex gap-2">
-                                    <select
-                                  id="custom-set-select"
-                                  className="flex-1 bg-white border border-slate-200 rounded-xl py-2 px-3 text-slate-800 focus:outline-none focus:ring-1 focus:ring-slate-400"
-                                >
-                                  <option value="">-- เลือกสินค้าที่จะเพิ่มเข้าร่วม --</option>
-                                  {productsList.flatMap((p) =>
-                                    (p.units || []).map((u: any) => (
-                                      <option key={u.id} value={u.id}>
-                                        {p.name} [{u.unitName}] (บาร์โค้ด: {u.barcode}) - {parseFloat(u.retailPrice).toFixed(2)} บาท
-                                      </option>
-                                    ))
-                                  )}
-                                </select>
-                                <button
-                                  type="button"
-                                  className="bg-indigo-600 text-white px-4 py-2 rounded-xl font-bold hover:bg-indigo-700 transition-colors"
-                                  onClick={() => {
-                                    const select = document.getElementById("custom-set-select") as HTMLSelectElement;
-                                    const val = select.value;
-                                    if (val && !promoFormCustomProductUnitIds.includes(val)) {
-                                      setPromoFormCustomProductUnitIds([...promoFormCustomProductUnitIds, val]);
-                                      select.value = "";
-                                    }
-                                  }}
-                                >
-                                  เพิ่ม
-                                </button>
-                              </div>
+                                    <SearchableSelect
+                                      className="flex-1 bg-white border border-slate-200 rounded-xl py-2 px-3 text-slate-800 focus:outline-none focus:ring-1 focus:ring-slate-400"
+                                      placeholder="-- ค้นหาและเลือกสินค้าที่จะเพิ่มเข้าร่วม --"
+                                      value=""
+                                      onChange={(val) => {
+                                        if (val && !promoFormCustomProductUnitIds.includes(val)) {
+                                          setPromoFormCustomProductUnitIds([...promoFormCustomProductUnitIds, val]);
+                                        }
+                                      }}
+                                      options={productsList.flatMap((p) =>
+                                        (p.units || []).map((u: any) => ({
+                                          value: u.id.toString(),
+                                          label: `${p.name} [${u.unitName}] - ${parseFloat(u.retailPrice).toFixed(2)} ฿`,
+                                          searchText: u.barcode || ""
+                                        }))
+                                      )}
+                                    />
+                                  </div>
 
                               {promoFormCustomProductUnitIds.length > 0 ? (
                                 <ul className="flex flex-col gap-2">
@@ -14128,21 +14245,19 @@ export default function App() {
                               ))}
                             </select>
                           ) : (
-                            <select
-                              required
-                              className="bg-slate-50 border border-slate-200 rounded-xl py-2 px-3 text-slate-800 focus:outline-none focus:ring-1 focus:ring-slate-400"
+                            <SearchableSelect
+                              className="bg-slate-50 border border-slate-200 rounded-xl py-2 px-3 text-slate-800 focus:outline-none focus:ring-1 focus:ring-slate-400 w-full"
+                              placeholder="-- ค้นหาและเลือกยูนิตสินค้า --"
                               value={promoFormProductUnitId}
-                              onChange={(e) => setPromoFormProductUnitId(e.target.value)}
-                            >
-                              <option value="">-- เลือกยูนิตสินค้า --</option>
-                              {productsList.flatMap((p) => 
-                                (p.units || []).map((u: any) => (
-                                  <option key={u.id} value={u.id}>
-                                    {p.name} [{u.unitName}] (บาร์โค้ด: {u.barcode}) - {parseFloat(u.retailPrice).toFixed(2)} บาท
-                                  </option>
-                                ))
+                              onChange={(val) => setPromoFormProductUnitId(val)}
+                              options={productsList.flatMap((p) => 
+                                (p.units || []).map((u: any) => ({
+                                  value: u.id.toString(),
+                                  label: `${p.name} [${u.unitName}] - ${parseFloat(u.retailPrice).toFixed(2)} ฿`,
+                                  searchText: u.barcode || ""
+                                }))
                               )}
-                            </select>
+                            />
                           )}
                         </div>
                       </>
@@ -14239,21 +14354,19 @@ export default function App() {
                           <div className="bg-emerald-50/50 border border-dashed border-emerald-200 rounded-2xl p-3 flex flex-col gap-3">
                             <div className="flex flex-col gap-1">
                               <label className="font-bold text-emerald-800">สินค้าที่นำมาแถมฟรี (สินค้า Y) *</label>
-                              <select
-                                required={promoFormType === "buy_x_get_y"}
-                                className="bg-white border border-slate-200 rounded-xl py-1.5 px-3 text-slate-800 focus:outline-none focus:ring-1 focus:ring-slate-400"
+                              <SearchableSelect
+                                className="bg-white border border-slate-200 rounded-xl py-1.5 px-3 text-slate-800 focus:outline-none focus:ring-1 focus:ring-slate-400 w-full"
+                                placeholder="-- ค้นหาและเลือกยูนิตของแถมฟรี --"
                                 value={promoFormFreeUnitId}
-                                onChange={(e) => setPromoFormFreeUnitId(e.target.value)}
-                              >
-                                <option value="">-- เลือกยูนิตของแถมฟรี --</option>
-                                {productsList.flatMap((p) => 
-                                  (p.units || []).map((u: any) => (
-                                    <option key={u.id} value={u.id}>
-                                      {p.name} [{u.unitName}] (บาร์โค้ด: {u.barcode})
-                                    </option>
-                                  ))
+                                onChange={(val) => setPromoFormFreeUnitId(val)}
+                                options={productsList.flatMap((p) => 
+                                  (p.units || []).map((u: any) => ({
+                                    value: u.id.toString(),
+                                    label: `${p.name} [${u.unitName}] (บาร์โค้ด: ${u.barcode || '-'}) `,
+                                    searchText: u.barcode || ""
+                                  }))
                                 )}
-                              </select>
+                              />
                             </div>
 
                             <div className="flex flex-col gap-1">

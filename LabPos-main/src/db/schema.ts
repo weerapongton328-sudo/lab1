@@ -238,6 +238,7 @@ export const storeSettings = pgTable('store_settings', {
   minPurchaseForPointsRedeem: numeric('min_purchase_for_points_redeem', { precision: 12, scale: 2 }).notNull().default('0.00'),
   pointsToDiscountRatio: numeric('points_to_discount_ratio', { precision: 12, scale: 2 }).notNull().default('0.10'), // 10 points = 1 THB default
   pointsEarnRatio: text('points_earn_ratio').notNull().default('20.00'), // 20 THB = 1 point default
+  enablePointSystem: boolean('enable_point_system').notNull().default(true),
   enableBillPayment: boolean('enable_bill_payment').notNull().default(true),
   billPaymentFee: text('bill_payment_fee').notNull().default('10.00'),
   roundingMode: text('rounding_mode').notNull().default('none'), // 'none', 'floor', 'ceil', 'round', 'round_025'

@@ -4031,10 +4031,10 @@ async function startServer() {
     });
     app.use(vite.middlewares);
   } else {
-    const distPath = path.join(process.cwd(), "dist");
+    const distPath = path.join(__dirname, process.env.NODE_ENV === "production" ? "" : "../dist");
     app.use(express.static(distPath));
     app.get("*", (req, res) => { res.sendFile(path.join(distPath, "index.html")); }); }
-  const PORT = Number(process.env.PORT) || 3000;
+  const PORT = 3000;
   app.listen(PORT, "0.0.0.0", () => { console.log(`Listening on port ${PORT}`); });
 }
 
