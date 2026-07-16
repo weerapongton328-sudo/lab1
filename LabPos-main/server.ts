@@ -715,7 +715,7 @@ app.put("/api/products/:id", async (req, res) => {
   const productId = parseInt(req.params.id);
   const { name, description, baseUnit, stockQuantity, minStock, imageUrl, categoryId, category, units } = req.body;
 
-  if ((stockQuantity !== undefined && parseInt(stockQuantity) < 0) || (units && Array.isArray(units) && units.some((u: any) => parseFloat(u.costPrice || "0") < 0))) {
+  if ((units && Array.isArray(units) && units.some((u: any) => parseFloat(u.costPrice || "0") < 0))) {
     return res.status(400).json({ error: "Invalid value" });
   }
 
