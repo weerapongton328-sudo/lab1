@@ -85,7 +85,7 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage: storage });
 
-const PORT = 3000;
+const PORT = Number(process.env.PORT) || 3000;
 
 app.use(express.json({ limit: "100mb" }));
 app.use(express.urlencoded({ limit: "100mb", extended: true }));
@@ -745,26 +745,64 @@ app.put("/api/products/:id", async (req, res) => {
         .where(eq(products.id, productId))
         .returning();
 
-      // For units, we delete old non-existent units and upsert current units
-      await tx.delete(productUnits).where(eq(productUnits.productId, productId));
-
+      // For units, we upsert current units and remove deleted ones if possible
       let updatedUnits = [];
+      const currentUnitIds = [];
       if (units && Array.isArray(units)) {
         for (const u of units) {
-          const [insertedUnit] = await tx
-            .insert(productUnits)
-            .values({
-              productId,
-              unitName: u.unitName,
-              barcode: u.barcode,
-              conversionFactor: parseInt(u.conversionFactor) || 1,
-              retailPrice: u.retailPrice.toString(),
-              wholesalePrice: u.wholesalePrice.toString(),
-              costPrice: (u.costPrice || "0.00").toString(),
-            })
-            .returning();
-          updatedUnits.push(insertedUnit);
+          if (u.id) {
+            const [updatedUnit] = await tx
+              .update(productUnits)
+              .set({
+                unitName: u.unitName,
+                barcode: u.barcode,
+                conversionFactor: parseInt(u.conversionFactor) || 1,
+                retailPrice: u.retailPrice.toString(),
+                wholesalePrice: u.wholesalePrice.toString(),
+                costPrice: (u.costPrice || "0.00").toString(),
+              })
+              .where(eq(productUnits.id, u.id))
+              .returning();
+            if (updatedUnit) {
+               updatedUnits.push(updatedUnit);
+               currentUnitIds.push(updatedUnit.id);
+            }
+          } else {
+            const [insertedUnit] = await tx
+              .insert(productUnits)
+              .values({
+                productId,
+                unitName: u.unitName,
+                barcode: u.barcode,
+                conversionFactor: parseInt(u.conversionFactor) || 1,
+                retailPrice: u.retailPrice.toString(),
+                wholesalePrice: u.wholesalePrice.toString(),
+                costPrice: (u.costPrice || "0.00").toString(),
+              })
+              .returning();
+            if (insertedUnit) {
+               updatedUnits.push(insertedUnit);
+               currentUnitIds.push(insertedUnit.id);
+            }
+          }
         }
+      }
+      
+      // Attempt to delete removed units, ignore errors if referenced
+      const existingUnits = await tx.select().from(productUnits).where(eq(productUnits.productId, productId));
+      for (const eu of existingUnits) {
+          if (!currentUnitIds.includes(eu.id)) {
+              try {
+                  // We can't use try-catch around a failing tx query easily in postgres without savepoints, 
+                  // but we can check if it is referenced in orderItems before deleting to avoid transaction abort.
+                  const [inSales] = await tx.select({id: orderItems.id}).from(orderItems).where(eq(orderItems.productUnitId, eu.id)).limit(1);
+                  if (!inSales) {
+                      await tx.delete(productUnits).where(eq(productUnits.id, eu.id));
+                  }
+              } catch (e) {
+                  console.error("Could not delete unit", eu.id, e);
+              }
+          }
       }
 
       return { ...updatedProduct, units: updatedUnits };
@@ -1006,7 +1044,7 @@ app.post("/api/orders", async (req, res) => {
             .update(products)
             .set({ stockQuantity: newQty, updatedAt: new Date() })
             .where(eq(products.id, p.id));
-
+          p.stockQuantity = newQty;
           // Log price overrides if occurred
           if (line.overridePrice !== undefined && line.overridePrice !== parseFloat(rawPrice)) {
             const authorizerId = line.overrideApprovedBy;
@@ -1060,6 +1098,7 @@ app.post("/api/orders", async (req, res) => {
                 .update(products)
                 .set({ stockQuantity: newQty, updatedAt: new Date() })
                 .where(eq(products.id, parentProd.id));
+              parentProd.stockQuantity = newQty;
             }
           }
         }
@@ -2007,13 +2046,14 @@ app.post("/api/stock-logs/direct-bulk", async (req, res) => {
             .update(productUnits)
             .set({ costPrice: updatedBaseCost, updatedAt: new Date() })
             .where(eq(productUnits.id, baseUnit.id));
+          baseUnit.costPrice = updatedBaseCost;
         }
-
         // Update product stock
         await tx
           .update(products)
           .set({ stockQuantity: newStock, updatedAt: new Date() })
           .where(eq(products.id, prodIdInt));
+        prod.stockQuantity = newStock;
 
         // Update specific unit cost if different from base
         if (unitIdInt && item.costPrice) {
@@ -4034,7 +4074,7 @@ async function startServer() {
     const distPath = path.join(__dirname, process.env.NODE_ENV === "production" ? "" : "../dist");
     app.use(express.static(distPath));
     app.get("*", (req, res) => { res.sendFile(path.join(distPath, "index.html")); }); }
-  const PORT = 3000;
+  const PORT = Number(process.env.PORT) || 3000;
   app.listen(PORT, "0.0.0.0", () => { console.log(`Listening on port ${PORT}`); });
 }
 

@@ -5918,6 +5918,7 @@ export default function App() {
         categoryId: editingProduct.categoryId || null,
         category: editingProduct.category || "ทั่วไป",
         units: editingProduct.tempUnits.map(u => ({
+          id: u.id,
           unitName: u.unitName,
           barcode: u.barcode && u.barcode.trim() ? u.barcode.trim() : generateAutoBarcode(),
           conversionFactor: parseInt(u.conversionFactor) || 1,
