@@ -1,4 +1,3 @@
-import { notFoundAudioB64 } from "./notFoundAudio";
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import Barcode from "react-barcode";
 import * as XLSX from "xlsx";
@@ -4818,8 +4817,18 @@ export default function App() {
     playErrorBeep();
     showToast(`ไม่พบรหัสบาร์โค้ด "${query}" ในระบบกรุณาลองใหม่อีกครั้ง`, "warning");
     if (storeEnableNotFoundAudio) {
-      const audio = new Audio(notFoundAudioB64);
-      audio.play().catch(e => console.warn("Embedded audio failed", e));
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance("ไม่พบสินค้าค่ะ");
+        utterance.lang = "th-TH";
+        if (window.speechSynthesis.getVoices) {
+          const voices = window.speechSynthesis.getVoices();
+          const thaiVoice = voices.find(v => v.lang.toLowerCase().includes("th"));
+          if (thaiVoice) utterance.voice = thaiVoice;
+        }
+        (window as any)._latestUtterance = utterance;
+        window.speechSynthesis.speak(utterance);
+      }
     }
     setBarcodeSearch("");
   };
@@ -18645,10 +18654,33 @@ export default function App() {
               )}
 
               {paymentMethod === "transfer" && (
-                <div className="bg-blue-50/50 border border-blue-200 rounded-2xl p-4 text-center animate-fadeIn font-sans h-full flex flex-col justify-center">
-                  <p className="text-sm text-blue-800 font-semibold leading-relaxed">
+                <div className="bg-blue-50/50 border border-blue-200 rounded-2xl p-4 text-center animate-fadeIn font-sans h-full flex flex-col items-center justify-center">
+                  <p className="text-sm text-blue-800 font-semibold leading-relaxed mb-2">
                     โอนจ่ายเต็มจำนวน: <span className="font-mono text-xl font-bold block text-blue-900 mt-1">฿{cartTotalAmount.toFixed(2)}</span>
                   </p>
+                  
+                  {storePromptpayEnabled && (
+                    <div className="relative bg-white border border-slate-200 p-2 rounded-xl shadow-sm mb-2 w-full max-w-[160px] mx-auto group">
+                      {storePromptpayNumber ? (
+                        <img
+                          src={`https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(generatePromptPayPayload(storePromptpayNumber, cartTotalAmount))}`}
+                          alt="PromptPay QR Code"
+                          className="w-full h-auto object-contain select-none rounded"
+                          referrerPolicy="no-referrer"
+                        />
+                      ) : storePromptpayQrUrl ? (
+                        <img
+                          src={storePromptpayQrUrl}
+                          alt="PromptPay Custom QR Code"
+                          className="w-full h-auto object-contain select-none rounded"
+                          referrerPolicy="no-referrer"
+                        />
+                      ) : (
+                         <div className="w-full h-24 flex items-center justify-center text-slate-300 text-xs">ไม่พบข้อมูล QR Code</div>
+                      )}
+                    </div>
+                  )}
+
                   <div className="text-xs text-blue-500 mt-1">
                     กรุณาตรวจสอบสลิปโอนเงินหลังเสร็จสมบูรณ์เพื่อป้องกันการหลอกลวง
                   </div>
@@ -18807,17 +18839,41 @@ export default function App() {
 
                   {(() => {
                     const totalVal = safeParseSplitVal(splitCash) + safeParseSplitVal(splitTransfer) + safeParseSplitVal(splitWelfare);
+                    const transferVal = safeParseSplitVal(splitTransfer);
                     const isMatch = Math.abs(totalVal - cartTotalAmount) < 0.05;
                     return (
-                      <div className={`text-[11px] text-center font-bold py-1.5 px-2.5 rounded-lg border font-sans mt-2 ${
-                        isMatch 
-                          ? "bg-emerald-50 text-emerald-700 border-emerald-200" 
-                          : "bg-red-50 text-red-600 border-red-200 animate-pulse"
-                      }`}>
-                        {isMatch 
-                          ? "✓ ยอดเงินครบองค์รวมพร้อมเปิดบิลชำระเงิน" 
-                          : `⚠ ขาด/เกินยอดเงินจากบิล: ฿${(cartTotalAmount - totalVal).toFixed(2)}`}
-                      </div>
+                      <>
+                        <div className={`text-[11px] text-center font-bold py-1.5 px-2.5 rounded-lg border font-sans mt-2 ${
+                          isMatch 
+                            ? "bg-emerald-50 text-emerald-700 border-emerald-200" 
+                            : "bg-red-50 text-red-600 border-red-200 animate-pulse"
+                        }`}>
+                          {isMatch 
+                            ? "✓ ยอดเงินครบองค์รวมพร้อมเปิดบิลชำระเงิน" 
+                            : `⚠ ขาด/เกินยอดเงินจากบิล: ฿${(cartTotalAmount - totalVal).toFixed(2)}`}
+                        </div>
+                        {transferVal > 0 && storePromptpayEnabled && (
+                          <div className="relative bg-white border border-slate-200 p-1 rounded-xl shadow-sm mt-2 w-full max-w-[120px] mx-auto group">
+                            {storePromptpayNumber ? (
+                              <img
+                                src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(generatePromptPayPayload(storePromptpayNumber, transferVal))}`}
+                                alt="PromptPay QR Code"
+                                className="w-full h-auto object-contain select-none rounded"
+                                referrerPolicy="no-referrer"
+                              />
+                            ) : storePromptpayQrUrl ? (
+                              <img
+                                src={storePromptpayQrUrl}
+                                alt="PromptPay Custom QR Code"
+                                className="w-full h-auto object-contain select-none rounded"
+                                referrerPolicy="no-referrer"
+                              />
+                            ) : (
+                               <div className="w-full h-20 flex items-center justify-center text-slate-300 text-[10px]">ไม่มี QR</div>
+                            )}
+                          </div>
+                        )}
+                      </>
                     );
                   })()}
                 </div>
