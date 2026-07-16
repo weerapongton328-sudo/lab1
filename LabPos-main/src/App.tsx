@@ -77,13 +77,13 @@ import {
 
 
 // Helper to convert Thai keyboard input layout (Kedmanee) to QWERTY English layout
-export const convertThaiToEngKeyboard = (input: string): string => {
+export const convertThaiToEngKeyboard = (input: string, forceConvert: boolean = false): string => {
   if (!input) return "";
   
-  // Only apply conversion if the input contains at least one Thai character (including Thai digits/symbols)
-  // This prevents mapping English characters like '-' to '3' when the keyboard is already in English.
-  const hasThai = /[ก-๙]/.test(input);
-  if (!hasThai) {
+  // If forceConvert is true, we always apply the mapping. This is useful for barcode scanners 
+  // where we know the input should strictly be English alphanumeric and we want to prevent Thai layout issues.
+  const hasThai = /[ก-๙]/.test(input) || /^[\/\-\+"()? \t\n\r]+$/.test(input);
+  if (!hasThai && !forceConvert) {
     return input;
   }
 
@@ -4673,13 +4673,13 @@ export default function App() {
 
   // Barcode input change handler with built-in layout mapping and debounce auto-submit
   const handleBarcodeChange = (val: string) => {
-    setBarcodeSearch(convertThaiToEngKeyboard(val));
+    setBarcodeSearch(convertThaiToEngKeyboard(val, true));
   };
 
   const handleBarcodeKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       e.preventDefault();
-      const currentValue = convertThaiToEngKeyboard(e.currentTarget.value).trim();
+      const currentValue = convertThaiToEngKeyboard(e.currentTarget.value, true).trim();
       if (currentValue) {
         handleBarcodeSubmit(undefined, currentValue);
       } else if (cart.length > 0 && !isPaymentModalOpen && !isSplitPaymentModalOpen) {
@@ -10363,7 +10363,7 @@ export default function App() {
                                 onKeyDown={(e) => {
                                   if (e.key === "Enter") {
                                     e.preventDefault();
-                                    const term = convertThaiToEngKeyboard(e.currentTarget.value).trim().toLowerCase();
+                                    const term = convertThaiToEngKeyboard(e.currentTarget.value, true).trim().toLowerCase();
                                     if (!term) return;
                                     
                                     let matchedUnitId = null;
@@ -10669,7 +10669,7 @@ export default function App() {
                                 onKeyDown={(e) => {
                                   if (e.key === "Enter") {
                                     e.preventDefault();
-                                    const term = convertThaiToEngKeyboard(e.currentTarget.value).trim().toLowerCase();
+                                    const term = convertThaiToEngKeyboard(e.currentTarget.value, true).trim().toLowerCase();
                                     if (!term) return;
                                     
                                     // Find unit by barcode
@@ -10858,7 +10858,7 @@ export default function App() {
                                 onKeyDown={(e) => {
                                   if (e.key === "Enter") {
                                     e.preventDefault();
-                                    const term = convertThaiToEngKeyboard(e.currentTarget.value).trim().toLowerCase();
+                                    const term = convertThaiToEngKeyboard(e.currentTarget.value, true).trim().toLowerCase();
                                     if (!term) return;
                                     
                                     // 1. Exact Barcode Match
