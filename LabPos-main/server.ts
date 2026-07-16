@@ -2339,7 +2339,7 @@ app.get("/api/settings", async (req, res) => {
 
 // PUT update store settings configuration
 app.put("/api/settings", async (req, res) => {
-  const { name, address, phone, taxId, logoUrl, alertSoundUrl, receiptFooter, allowNegativeStock, pointsToDiscountRatio, pointsEarnRatio, billPaymentFee, roundingMode, enableBillPayment, billRoundingMode, promptpayEnabled, promptpayNumber, promptpayName, enableAdvancedInventory, enableTaxInvoice, vatRate, vatType, enableWeightBarcode, weightBarcodePrefix, weightBarcodeType } = req.body;
+  const { name, address, phone, taxId, logoUrl, enableNotFoundAudio, receiptFooter, allowNegativeStock, pointsToDiscountRatio, pointsEarnRatio, billPaymentFee, roundingMode, enableBillPayment, billRoundingMode, promptpayEnabled, promptpayNumber, promptpayName, enableAdvancedInventory, enableTaxInvoice, vatRate, vatType, enableWeightBarcode, weightBarcodePrefix, weightBarcodeType } = req.body;
   try {
     const [updated] = await db
       .update(storeSettings)
@@ -2349,7 +2349,7 @@ app.put("/api/settings", async (req, res) => {
         phone: phone || "",
         taxId: taxId || "",
         logoUrl: logoUrl || "",
-        alertSoundUrl: alertSoundUrl || "",
+        enableNotFoundAudio: enableNotFoundAudio !== false,
         receiptFooter: receiptFooter || "",
         allowNegativeStock: allowNegativeStock === true,
         pointsToDiscountRatio: pointsToDiscountRatio || "10",

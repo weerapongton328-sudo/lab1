@@ -1,0 +1,1 @@
+ALTER TABLE "store_settings" ADD COLUMN "enable_not_found_audio" boolean DEFAULT true NOT NULL;

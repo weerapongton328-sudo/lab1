@@ -36,6 +36,13 @@
       "when": 1784040143254,
       "tag": "0004_swift_omega_sentinel",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1784208303565,
+      "tag": "0005_married_nebula",
+      "breakpoints": true
     }
   ]
 }

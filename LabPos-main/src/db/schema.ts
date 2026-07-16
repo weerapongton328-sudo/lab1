@@ -244,6 +244,7 @@ export const storeSettings = pgTable('store_settings', {
   roundingMode: text('rounding_mode').notNull().default('none'), // 'none', 'floor', 'ceil', 'round', 'round_025'
   billRoundingMode: text('bill_rounding_mode').notNull().default('none'), // 'none', 'floor', 'ceil', 'round', 'round_025'
   alertSoundUrl: text('alert_sound_url'),
+  enableNotFoundAudio: boolean('enable_not_found_audio').notNull().default(true),
   promptpayEnabled: boolean('promptpay_enabled').notNull().default(false),
   promptpayNumber: text('promptpay_number'),
   promptpayName: text('promptpay_name'),
