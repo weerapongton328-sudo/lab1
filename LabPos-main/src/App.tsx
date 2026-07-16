@@ -79,6 +79,14 @@ import {
 // Helper to convert Thai keyboard input layout (Kedmanee) to QWERTY English layout
 export const convertThaiToEngKeyboard = (input: string): string => {
   if (!input) return "";
+  
+  // Only apply conversion if the input contains at least one Thai character (including Thai digits/symbols)
+  // This prevents mapping English characters like '-' to '3' when the keyboard is already in English.
+  const hasThai = /[ก-๙]/.test(input);
+  if (!hasThai) {
+    return input;
+  }
+
   const map: Record<string, string> = {
     // Number row (unshifted) - Fixed Mapping
     'ๅ': '1', '/': '2', '-': '3', 'ภ': '4', 'ถ': '5', 'ุ': '6', 'ึ': '7', 'ค': '8', 'ต': '9', 'จ': '0', 'ข': '-', 'ช': '=',
@@ -1471,6 +1479,7 @@ export default function App() {
   const [stockInLotNumber, setStockInLotNumber] = useState<string>("");
   const [stockInExpiryDate, setStockInExpiryDate] = useState<string>("");
   const [grSearchPoNumber, setGrSearchPoNumber] = useState<string>("");
+  const [grBarcodeScan, setGrBarcodeScan] = useState<string>("");
 
   // States for direct stock-in (without PO)
   const [stockInMode, setStockInMode] = useState<"po" | "direct">("po");
@@ -1682,12 +1691,29 @@ export default function App() {
     }
   }, []);
 
-  // Set default cashier user automatically on load after users fetched
+  // Check for saved mobile login state or set default cashier
   useEffect(() => {
-    if (availableUsers.length > 0 && !currentUser) {
-      // Default to Cashier for ease of demo flow
-      const cashier = availableUsers.find(u => u.role === "cashier") || availableUsers[0];
-      setCurrentUser(cashier);
+    if (availableUsers.length > 0 && !isLoggedIn) {
+      const savedUserId = localStorage.getItem('posSavedUserId');
+      const savedMode = localStorage.getItem('posSavedLoginMode');
+      
+      if (savedMode === 'mobile' && savedUserId) {
+        const user = availableUsers.find(u => u.id.toString() === savedUserId);
+        if (user) {
+          setCurrentUser(user);
+          setIsLoggedIn(true);
+          setLoginMode('mobile');
+          setDashboardSubTab("reports");
+          setActiveTab("dashboard");
+          return;
+        }
+      }
+      
+      if (!currentUser) {
+        // Default to Cashier for ease of demo flow
+        const cashier = availableUsers.find(u => u.role === "cashier") || availableUsers[0];
+        setCurrentUser(cashier);
+      }
     }
   }, [availableUsers]);
 
@@ -4597,6 +4623,8 @@ export default function App() {
         logAuditEvent("user_login", user.id, user.id, `🔐 ผู้ใช้ ${user.name} (${user.role}) เข้าสู่ระบบสำเร็จ`);
         
         if (loginMode === 'mobile') {
+          localStorage.setItem('posSavedUserId', user.id.toString());
+          localStorage.setItem('posSavedLoginMode', 'mobile');
           setDashboardSubTab("reports");
           setActiveTab("dashboard");
         } else if (user.canAccessPos) {
@@ -4651,8 +4679,9 @@ export default function App() {
   const handleBarcodeKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       e.preventDefault();
-      if (barcodeSearch.trim()) {
-        handleBarcodeSubmit(undefined, barcodeSearch.trim());
+      const currentValue = convertThaiToEngKeyboard(e.currentTarget.value).trim();
+      if (currentValue) {
+        handleBarcodeSubmit(undefined, currentValue);
       } else if (cart.length > 0 && !isPaymentModalOpen && !isSplitPaymentModalOpen) {
         setIsPaymentModalOpen(true);
         setReceivedAmount("");
@@ -7184,6 +7213,8 @@ export default function App() {
               if (currentUser) {
                 logAuditEvent("user_logout", currentUser.id, currentUser.id, `🚪 ผู้ใช้ ${currentUser.name} (${currentUser.role}) ได้กดออกจากระบบอย่างถูกต้อง`);
               }
+              localStorage.removeItem('posSavedUserId');
+              localStorage.removeItem('posSavedLoginMode');
               setIsLoggedIn(false);
               setCurrentUser(null);
               setLoginUsername("");
@@ -10329,12 +10360,33 @@ export default function App() {
                                 placeholder="ค้นหาชื่อสินค้า..."
                                 value={poSearchTerm}
                                 onChange={(e) => setPoSearchTerm(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") {
+                                    e.preventDefault();
+                                    const term = convertThaiToEngKeyboard(e.currentTarget.value).trim().toLowerCase();
+                                    if (!term) return;
+                                    
+                                    let matchedUnitId = null;
+                                    // 1. Exact Barcode Match
+                                    for (const p of productsList) {
+                                      const u = p.units?.find((u: any) => u.barcode === term);
+                                      if (u) {
+                                        matchedUnitId = u.id;
+                                        break;
+                                      }
+                                    }
+                                    if (matchedUnitId) {
+                                      handleAddPoItem(matchedUnitId.toString());
+                                      setPoSearchTerm("");
+                                    }
+                                  }
+                                }}
                               />
                               <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                               {poSearchTerm && (
                                 <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg z-10 max-h-60 overflow-y-auto">
                                   {productsList
-                                    .filter(p => p.name.toLowerCase().includes(poSearchTerm.toLowerCase()))
+                                    .filter(p => p.name.toLowerCase().includes(poSearchTerm.toLowerCase()) || p.units?.some((u: any) => u.barcode?.includes(poSearchTerm)))
                                     .map(p => (
                                       <div key={p.id}>
                                         {p.units?.map((u: any) => (
@@ -10605,6 +10657,54 @@ export default function App() {
                             </div>
                           </div>
 
+                          <div className="mb-4">
+                            <div className="relative max-w-sm">
+                              <input
+                                autoFocus
+                                type="text"
+                                className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 pl-10 pr-3 text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-mono text-sm"
+                                placeholder="สแกนบาร์โค้ดเพื่อรับของ..."
+                                value={grBarcodeScan}
+                                onChange={(e) => setGrBarcodeScan(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") {
+                                    e.preventDefault();
+                                    const term = convertThaiToEngKeyboard(e.currentTarget.value).trim().toLowerCase();
+                                    if (!term) return;
+                                    
+                                    // Find unit by barcode
+                                    let matchedUnitId = null;
+                                    for (const p of productsList) {
+                                      const u = p.units?.find((u: any) => u.barcode === term);
+                                      if (u) {
+                                        matchedUnitId = u.id;
+                                        break;
+                                      }
+                                    }
+                                    
+                                    if (matchedUnitId) {
+                                      const existingIndex = grItems.findIndex(i => i.productUnitId === matchedUnitId);
+                                      if (existingIndex > -1) {
+                                        const newItems = [...grItems];
+                                        newItems[existingIndex].receivedQuantity += 1;
+                                        setGrItems(newItems);
+                                        showToast(`นับเพิ่ม 1 ชิ้นแล้ว`, "success");
+                                      } else {
+                                        playErrorBeep();
+                                        showToast("สินค้านี้ไม่ได้อยู่ในใบสั่งซื้อ PO", "warning");
+                                      }
+                                    } else {
+                                      playErrorBeep();
+                                      showToast("ไม่พบสินค้าจากบาร์โค้ดนี้ในระบบ", "warning");
+                                    }
+                                    setGrBarcodeScan("");
+                                  }
+                                }}
+                              />
+                              <Search className="w-4 h-4 text-emerald-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                            </div>
+                          </div>
+                          
                           <div className="overflow-x-auto rounded-2xl border border-slate-200 mb-6">
                             <table className="w-full text-left border-collapse text-sm">
                               <thead className="bg-slate-50">
@@ -10749,11 +10849,67 @@ export default function App() {
                             <label className="font-bold text-slate-600">พิมพ์ค้นหาชื่อหรือบาร์โค้ด</label>
                             <div className="relative">
                               <input
+                                autoFocus
                                 type="text"
                                 className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 pl-9 pr-3 text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
                                 placeholder="ค้นหาชื่อสินค้า..."
                                 value={directSearchTerm}
                                 onChange={(e) => setDirectSearchTerm(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") {
+                                    e.preventDefault();
+                                    const term = convertThaiToEngKeyboard(e.currentTarget.value).trim().toLowerCase();
+                                    if (!term) return;
+                                    
+                                    // 1. Exact Barcode Match
+                                    let matchedProduct = null;
+                                    let matchedUnit = null;
+                                    for (const p of productsList) {
+                                      const u = p.units?.find((u: any) => u.barcode === term);
+                                      if (u) {
+                                        matchedProduct = p;
+                                        matchedUnit = u;
+                                        break;
+                                      }
+                                    }
+                                    
+                                    if (!matchedProduct) {
+                                      // 2. Fallback to includes
+                                      const filtered = productsList.filter(p => p.name.toLowerCase().includes(term) || p.units?.some((u: any) => u.barcode?.includes(term)));
+                                      if (filtered.length === 1) {
+                                        matchedProduct = filtered[0];
+                                        matchedUnit = matchedProduct.units?.find((u: any) => u.barcode?.includes(term));
+                                      }
+                                    }
+
+                                    if (matchedProduct) {
+                                      const p = matchedProduct;
+                                      const existingIndex = directStockInItems.findIndex(
+                                        (item: any) => item.productId === p.id && item.productUnitId === (matchedUnit ? matchedUnit.id : null)
+                                      );
+                                      if (existingIndex > -1) {
+                                        const updated = [...directStockInItems];
+                                        updated[existingIndex].quantity += 1;
+                                        setDirectStockInItems(updated);
+                                      } else {
+                                        setDirectStockInItems([
+                                          ...directStockInItems,
+                                          {
+                                            productId: p.id,
+                                            productName: p.name,
+                                            productUnitId: matchedUnit ? matchedUnit.id : null,
+                                            unitName: matchedUnit ? matchedUnit.unitName : p.baseUnit,
+                                            conversionFactor: matchedUnit ? matchedUnit.conversionFactor : 1,
+                                            quantity: 1,
+                                            costPrice: matchedUnit ? matchedUnit.costPrice || "0" : (p.units?.find(u => u.conversionFactor === 1)?.costPrice || "0"),
+                                            lotNumber: "",
+                                          }
+                                        ]);
+                                      }
+                                      setDirectSearchTerm("");
+                                    }
+                                  }
+                                }}
                               />
                               <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                             </div>
@@ -10763,7 +10919,7 @@ export default function App() {
                           {directSearchTerm && (
                             <div className="bg-white border border-slate-200 rounded-xl shadow-lg max-h-80 overflow-y-auto z-10">
                               {productsList
-                                .filter(p => p.name.toLowerCase().includes(directSearchTerm.toLowerCase()))
+                                .filter(p => p.name.toLowerCase().includes(directSearchTerm.toLowerCase()) || p.units?.some((u: any) => u.barcode?.includes(directSearchTerm)))
                                 .slice(0, 15)
                                 .map(p => (
                                   <div key={p.id} className="border-b border-slate-50 last:border-0">
@@ -10843,7 +10999,7 @@ export default function App() {
                                     ))}
                                   </div>
                                 ))}
-                              {productsList.filter(p => p.name.toLowerCase().includes(directSearchTerm.toLowerCase())).length === 0 && (
+                              {productsList.filter(p => p.name.toLowerCase().includes(directSearchTerm.toLowerCase()) || p.units?.some((u: any) => u.barcode?.includes(directSearchTerm))).length === 0 && (
                                 <div className="p-4 text-center text-slate-400 text-xs">
                                   ไม่พบสินค้าที่ตรงกับการค้นหา
                                 </div>
@@ -16692,7 +16848,7 @@ export default function App() {
                 placeholder="พิมพ์ชื่อสินค้า ค้นหาด้วยรหัส หรือกลุ่ม... (เลื่อน ⬆ ⬇ ⬅ ➡ เพื่อเลือก, Enter ยืนยัน)"
                 className="w-full bg-slate-50 border border-slate-300 text-sm rounded-xl py-3 px-4 pl-11 focus:outline-none focus:ring-1 focus:ring-emerald-500 text-slate-700"
                 onKeyDown={(e) => {
-                  const filteredProducts = productsList.filter(p => p.name.toLowerCase().includes(modalSearchQuery.toLowerCase()) || p.units.some(u => u.barcode.includes(modalSearchQuery))).slice(0, 50);
+                  const filteredProducts = productsList.filter(p => p.name.toLowerCase().includes(modalSearchQuery.toLowerCase()) || p.units?.some((u: any) => u.barcode?.includes(modalSearchQuery))).slice(0, 50);
                   if (e.key === "Escape") {
                     setIsSearchModalOpen(false);
                     setTimeout(() => barcodeInputRef.current?.focus(), 50);
@@ -16746,7 +16902,7 @@ export default function App() {
             {/* Results listing */}
             <div className="max-h-80 overflow-y-auto divide-y divide-slate-100 pr-1">
               {productsList
-                .filter(p => p.name.toLowerCase().includes(modalSearchQuery.toLowerCase()) || p.units.some(u => u.barcode.includes(modalSearchQuery)))
+                .filter(p => p.name.toLowerCase().includes(modalSearchQuery.toLowerCase()) || p.units?.some((u: any) => u.barcode?.includes(modalSearchQuery)))
                 .slice(0, 50)
                 .map((p, pIdx) => (
                   <div key={p.id} id={`search-prod-row-${pIdx}`} className={`py-2.5 flex items-center justify-between gap-3 font-sans rounded-xl px-2 transition-colors ${pIdx === modalSearchFocusedProductIndex ? 'bg-slate-50/80 ring-1 ring-slate-200' : ''}`}>

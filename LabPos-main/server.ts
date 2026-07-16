@@ -3242,6 +3242,7 @@ app.post("/api/purchase-orders/:id/receive", async (req, res) => {
               updatedAt: new Date() 
             })
             .where(eq(products.id, prod.id));
+          prod.stockQuantity = newQty;
             
           await tx.insert(stockInLogs).values({
             productId: prod.id,
