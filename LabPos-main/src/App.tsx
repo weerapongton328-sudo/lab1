@@ -1,3 +1,4 @@
+import { notFoundAudioB64 } from "./notFoundAudio";
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import Barcode from "react-barcode";
 import * as XLSX from "xlsx";
@@ -2098,37 +2099,29 @@ export default function App() {
       return;
     }
 
-    pri.document.open();
-    pri.document.write('<!DOCTYPE html><html><head><title>Print Receipt</title>');
-    
-    // ดึง Style ของ Tailwind จากหน้าจอหลักเข้าไปใน Iframe เพื่อไม่ให้ UI เพี้ยน
-    const styles = document.querySelectorAll('style, link[rel="stylesheet"]');
-    styles.forEach((s) => {
-      pri.document.write(s.outerHTML);
+    let stylesHTML = '';
+    document.querySelectorAll('style, link[rel="stylesheet"]').forEach((s) => {
+      stylesHTML += s.outerHTML;
     });
 
-    // เขียน CSS พื้นฐานเพิ่มเพื่อรีดความเร็วและบังคับโชว์ Layout
-    pri.document.write('<style>');
-    pri.document.write('body { margin: 0; padding: 0; background: white !important; }');
-    pri.document.write('#' + targetElement.id + ' { display: block !important; visibility: visible !important; position: static !important; width: 100% !important; margin: 0 !important; }');
-    pri.document.write('</style>');
-
-    pri.document.write('</head><body>');
-    pri.document.write(targetElement.outerHTML);
-    pri.document.write('</body></html>');
-    pri.document.close();
-
-    // หน่วงเวลาเล็กน้อยเพื่อให้ CSS ใน Iframe โหลดเสร็จก่อนสั่งพิมพ์
-    setTimeout(() => {
+    const execPrint = () => {
+      if (iframe.dataset.printed) return;
+      iframe.dataset.printed = 'true';
       pri.focus();
       pri.print();
-      // ลบ Iframe ทิ้งหลังใช้งานเพื่อคืนหน่วยความจำ
       setTimeout(() => {
-        if (iframe.parentNode) {
-          iframe.parentNode.removeChild(iframe);
-        }
+        if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
       }, 1000);
-    }, 250);
+    };
+
+    iframe.onload = execPrint;
+
+    pri.document.open();
+    pri.document.write(`<!DOCTYPE html><html><head><title>Print</title>${stylesHTML}<style>@page { size: auto; margin: 0mm; } body { margin: 0; padding: 0; background: white !important; font-family: "Tahoma", sans-serif; -webkit-print-color-adjust: exact; } #${targetElement.id} { display: block !important; visibility: visible !important; position: absolute !important; left: 0 !important; top: 0 !important; width: 100% !important; margin: 0 !important; } body > :not(#${targetElement.id}) { display: none !important; }</style></head><body>${targetElement.outerHTML}</body></html>`);
+    pri.document.close();
+
+    // หน่วงเวลาสั้นมากๆ (50ms) เพื่อให้ CSS โหลดทัน แต่ไม่ทำให้ผู้ใช้รู้สึกว่าช้า
+    setTimeout(execPrint, 50);
   };
 
   const triggerAutoPrint = () => {
@@ -4883,8 +4876,18 @@ export default function App() {
     playErrorBeep();
     showToast(`ไม่พบรหัสบาร์โค้ด "${query}" ในระบบกรุณาลองใหม่อีกครั้ง`, "warning");
     if (storeEnableNotFoundAudio) {
-      const audio = new Audio(notFoundAudioB64);
-      audio.play().catch(e => console.warn("Embedded audio failed", e));
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance("ไม่พบสินค้าค่ะ");
+        utterance.lang = "th-TH";
+        if (window.speechSynthesis.getVoices) {
+          const voices = window.speechSynthesis.getVoices();
+          const thaiVoice = voices.find(v => v.lang.toLowerCase().includes("th"));
+          if (thaiVoice) utterance.voice = thaiVoice;
+        }
+        (window as any)._latestUtterance = utterance;
+        window.speechSynthesis.speak(utterance);
+      }
     }
     setBarcodeSearch("");
   };
