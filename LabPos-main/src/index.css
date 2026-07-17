@@ -21,6 +21,9 @@ body {
   /* Hide all elements on the body by default to prevent heavy layout computation during print preview */
   body * {
     visibility: hidden !important;
+    -webkit-print-color-adjust: exact !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
   }
 
   /* Make ONLY our print layouts and their children visible to ensure instant Chrome rendering */
@@ -73,9 +76,13 @@ body {
     display: block !important;
     width: 80mm;
     margin: 0;
+    padding: 0;
     background: white !important;
     color: black !important;
     box-shadow: none !important;
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
   }
 
   /* Override styles for 58mm printer paper width */
@@ -84,6 +91,9 @@ body {
   body[data-paper-width="58mm"]:not([data-print-size]) #thermal-print-layout,
   body[data-paper-width="58mm"]:not([data-print-size]) #thermal-print-layout-bill {
     width: 58mm !important;
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
   }
   body[data-print-size="thermal"] #a4-print-layout,
   body[data-print-size="thermal"] #label-print-layout {
